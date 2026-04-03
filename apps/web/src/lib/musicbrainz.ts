@@ -119,9 +119,3 @@ export function getArtistUrls(relations: MBUrlRelation[]) {
   }
   return urls;
 }
-
-export function mbidToHash(mbid: string): `0x${string}` {
-  // Simple hash: keccak256 of the MBID string
-  // In production, use viem's keccak256
-  return `0x${mbid.replace(/-/g, "").padEnd(64, "0")}` as `0x${string}`;
-}

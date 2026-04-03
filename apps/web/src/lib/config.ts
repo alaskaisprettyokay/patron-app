@@ -1,6 +1,7 @@
-import { http, createConfig } from "wagmi";
+import { http } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { type Chain } from "viem";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
 // Arc Testnet chain definition
 export const arcTestnet: Chain = {
@@ -16,7 +17,9 @@ export const arcTestnet: Chain = {
   testnet: true,
 };
 
-export const config = createConfig({
+export const config = getDefaultConfig({
+  appName: "Patron",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "demo",
   chains: [arcTestnet, baseSepolia],
   transports: {
     [arcTestnet.id]: http(),

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { WalletConnectPay } from "@/components/WalletConnectPay";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import {
   ESCROW_ADDRESS,
@@ -20,13 +21,22 @@ interface DepositModalProps {
 export function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const [amount, setAmount] = useState("10");
   const [step, setStep] = useState<"approve" | "deposit" | "done">("approve");
-  const { address } = useAccount();
 
-  const { writeContract: approveWrite, data: approveTx } = useWriteContract();
-  const { writeContract: depositWrite, data: depositTx } = useWriteContract();
+  const { writeContract: approveWrite, data: approveTx, isPending: approvePending } = useWriteContract();
+  const { writeContract: depositWrite, data: depositTx, isPending: depositPending } = useWriteContract();
 
-  const { isLoading: approving } = useWaitForTransactionReceipt({ hash: approveTx });
-  const { isLoading: depositing } = useWaitForTransactionReceipt({ hash: depositTx });
+  const { isLoading: approveConfirming, isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveTx });
+  const { isLoading: depositConfirming, isSuccess: depositConfirmed } = useWaitForTransactionReceipt({ hash: depositTx });
+
+  // Advance to deposit step only after approve tx confirms
+  useEffect(() => {
+    if (approveConfirmed) setStep("deposit");
+  }, [approveConfirmed]);
+
+  // Advance to done step only after deposit tx confirms
+  useEffect(() => {
+    if (depositConfirmed) setStep("done");
+  }, [depositConfirmed]);
 
   const handleApprove = () => {
     approveWrite({
@@ -35,7 +45,6 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       functionName: "approve",
       args: [ESCROW_ADDRESS, parseUSDC(amount)],
     });
-    setStep("deposit");
   };
 
   const handleDeposit = () => {
@@ -45,10 +54,12 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       functionName: "deposit",
       args: [parseUSDC(amount)],
     });
-    setStep("done");
   };
 
   if (!isOpen) return null;
+
+  const approving = approvePending || approveConfirming;
+  const depositing = depositPending || depositConfirming;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -94,15 +105,26 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
             At $0.05/listen, ${amount} covers ~{Math.floor(Number(amount) / 0.05)} listens
           </div>
 
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-800" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-gray-900 px-2 text-gray-500">or buy USDC directly</span>
+            </div>
+          </div>
+
+          <WalletConnectPay amount={amount} />
+
           {step === "approve" && (
             <button onClick={handleApprove} disabled={approving} className="btn-primary w-full">
-              {approving ? "Approving..." : `Approve $${amount} USDC`}
+              {approveConfirming ? "Confirming..." : approvePending ? "Approve in wallet..." : `Approve $${amount} USDC`}
             </button>
           )}
 
           {step === "deposit" && (
             <button onClick={handleDeposit} disabled={depositing} className="btn-primary w-full">
-              {depositing ? "Depositing..." : `Deposit $${amount} USDC`}
+              {depositConfirming ? "Confirming..." : depositPending ? "Confirm in wallet..." : `Deposit $${amount} USDC`}
             </button>
           )}
 
