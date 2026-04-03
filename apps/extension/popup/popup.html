@@ -1,17 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Patron</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       width: 320px;
-      min-height: 200px;
-      background: #0a0a0a;
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
       padding: 16px;
     }
     .header {
@@ -19,120 +16,187 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #1f1f1f;
     }
     .logo {
       font-size: 18px;
       font-weight: 700;
-      background: linear-gradient(135deg, #36b2f8, #10b981);
+      background: linear-gradient(135deg, #6c63ff, #a855f7);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #10b981;
+    .stats {
+      font-size: 11px;
+      color: #888;
+      text-align: right;
     }
-    .status-dot.inactive { background: #4b5563; }
-    .current-track {
-      background: #111;
-      border: 1px solid #1f1f1f;
+    .stats strong { color: #2ed573; }
+
+    /* Now Playing */
+    .now-playing {
+      background: #111118;
       border-radius: 12px;
       padding: 14px;
       margin-bottom: 12px;
+      border: 1px solid #1a1a2e;
     }
-    .track-label {
+    .status-label {
       font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #6b7280;
-      margin-bottom: 6px;
+      letter-spacing: 1px;
+      color: #666;
+      margin-bottom: 8px;
     }
     .track-name {
       font-size: 14px;
       font-weight: 600;
+      color: #fff;
       margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .artist-name {
       font-size: 12px;
-      color: #9ca3af;
+      color: #aaa;
+      margin-bottom: 10px;
     }
-    .tip-status {
+    .platform-badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #1a1a2e;
+      color: #6c63ff;
+      margin-bottom: 10px;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      margin-top: 8px;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #1a1a2e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease, background-color 0.3s ease;
+      width: 0%;
+    }
+    .progress-fill.listening { background: linear-gradient(90deg, #6c63ff, #a855f7); }
+    .progress-fill.complete { background: #2ed573; }
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    /* Status states */
+    .status-idle .now-playing { border-color: #1a1a2e; }
+    .status-listening .now-playing { border-color: #6c63ff33; }
+    .status-scrobbled .now-playing { border-color: #2ed57333; }
+    .status-paused .now-playing { border-color: #ffd93d33; }
+    .status-skipped .now-playing { border-color: #ff6b6b33; }
+
+    .tip-result {
       display: flex;
       align-items: center;
       gap: 6px;
       margin-top: 8px;
+      font-size: 12px;
+      color: #2ed573;
+      font-weight: 500;
+    }
+    .tip-result.escrowed { color: #ffd93d; }
+
+    /* Scrobble history */
+    .history {
+      margin-top: 4px;
+    }
+    .history-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #444;
+      margin-bottom: 8px;
+    }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #111;
       font-size: 11px;
     }
-    .tip-status.success { color: #10b981; }
-    .tip-status.pending { color: #f59e0b; }
-    .tip-status.error { color: #ef4444; }
-    .stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .stat {
-      background: #111;
-      border: 1px solid #1f1f1f;
-      border-radius: 8px;
-      padding: 10px;
-    }
-    .stat-value {
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .stat-label {
-      font-size: 10px;
-      color: #6b7280;
-    }
-    .stat-value.green { color: #10b981; }
-    .link {
-      display: block;
+    .history-item:last-child { border-bottom: none; }
+    .history-track { color: #ccc; }
+    .history-artist { color: #888; font-size: 10px; }
+    .history-amount { color: #2ed573; font-weight: 500; font-size: 11px; }
+
+    .empty-state {
       text-align: center;
+      padding: 24px;
+      color: #444;
       font-size: 12px;
-      color: #36b2f8;
-      text-decoration: none;
-      padding: 8px;
     }
-    .link:hover { text-decoration: underline; }
-    .empty {
+    .empty-state .emoji { font-size: 24px; margin-bottom: 8px; }
+
+    .footer {
+      margin-top: 12px;
       text-align: center;
-      padding: 24px 0;
-      color: #6b7280;
-      font-size: 13px;
+    }
+    .footer a {
+      font-size: 11px;
+      color: #6c63ff;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <span class="logo">Patron</span>
-    <span class="status-dot" id="statusDot"></span>
-  </div>
-
-  <div id="content">
-    <div class="empty">
-      <p>Play music in your browser to start tipping artists.</p>
+    <span class="logo">🎵 Patron</span>
+    <div class="stats">
+      <div><strong id="total-tipped">$0.00</strong> tipped</div>
+      <div id="tip-count">0 scrobbles</div>
     </div>
   </div>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value green" id="totalTipped">$0.00</div>
-      <div class="stat-label">Total tipped</div>
+  <div id="app" class="status-idle">
+    <div class="now-playing">
+      <div class="status-label" id="status-label">Waiting for music...</div>
+      <div class="track-name" id="track-name">—</div>
+      <div class="artist-name" id="artist-name">Play something to get started</div>
+      <div class="progress-container" id="progress-container" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill listening" id="progress-fill"></div>
+        </div>
+        <div class="progress-text">
+          <span id="progress-time">0s</span>
+          <span id="progress-target">10s</span>
+        </div>
+      </div>
+      <div class="tip-result" id="tip-result" style="display: none;"></div>
     </div>
-    <div class="stat">
-      <div class="stat-value" id="tipCount">0</div>
-      <div class="stat-label">Tracks tipped</div>
+
+    <div class="history" id="history-section" style="display: none;">
+      <div class="history-title">Recent Scrobbles</div>
+      <div id="history-list"></div>
+    </div>
+
+    <div class="empty-state" id="empty-state">
+      <div class="emoji">🎧</div>
+      Play music on Spotify, SoundCloud, Bandcamp, or YouTube Music
     </div>
   </div>
 
-  <a href="https://patron.xyz/dashboard" target="_blank" class="link">
-    Open Dashboard
-  </a>
+  <div class="footer">
+    <a href="http://localhost:3000/dashboard" target="_blank">Open Dashboard →</a>
+  </div>
 
   <script src="popup.js"></script>
 </body>

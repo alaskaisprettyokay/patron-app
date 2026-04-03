@@ -1,26 +1,27 @@
 // Patron Content Script — SoundCloud (soundcloud.com)
 
 (function () {
-  let lastDetected = "";
+  const SCROBBLE_THRESHOLD = 10000;
+  const POLL_INTERVAL = 1000;
 
-  function detectTrack() {
+  let currentTrack = null;
+  let listenStart = null;
+  let scrobbled = false;
+
+  function getTrackInfo() {
     let artist = null;
     let track = null;
 
-    // Playback sound badge (bottom player bar)
-    const titleLink = document.querySelector(
-      ".playbackSoundBadge__titleLink"
-    );
-    const artistLink = document.querySelector(
-      ".playbackSoundBadge__lightLink"
-    );
+    // SoundCloud bottom player bar
+    const titleEl = document.querySelector(".playbackSoundBadge__titleLink");
+    const artistEl = document.querySelector(".playbackSoundBadge__lightLink");
 
-    if (titleLink && artistLink) {
-      track = titleLink.getAttribute("title")?.trim() || titleLink.textContent?.trim();
-      artist = artistLink.getAttribute("title")?.trim() || artistLink.textContent?.trim();
+    if (titleEl && artistEl) {
+      track = titleEl.getAttribute("title")?.trim() || titleEl.textContent?.trim();
+      artist = artistEl.getAttribute("title")?.trim() || artistEl.textContent?.trim();
     }
 
-    // Fallback: document title "Artist - Track | SoundCloud"
+    // Fallback: document title — "Artist - Track | SoundCloud"
     if (!track || !artist) {
       const title = document.title;
       const match = title.match(/^(.+?)\s-\s(.+?)\s*\|/);
@@ -30,10 +31,74 @@
       }
     }
 
-    if (artist && track) {
-      const key = `${artist}::${track}`;
-      if (key !== lastDetected) {
-        lastDetected = key;
+    return { artist, track };
+  }
+
+  function isPlaying() {
+    // SoundCloud: play button has "playing" class when active
+    const playBtn = document.querySelector(".playControls__play");
+    if (playBtn) {
+      return playBtn.classList.contains("playing");
+    }
+    return false;
+  }
+
+  function detectAndScrobble() {
+    const { artist, track } = getTrackInfo();
+    const playing = isPlaying();
+    const key = artist && track ? `${artist}::${track}` : null;
+
+    if (key !== currentTrack) {
+      if (currentTrack && !scrobbled) {
+        chrome.runtime.sendMessage({
+          type: "SCROBBLE_SKIPPED",
+          data: { platform: "soundcloud" },
+        });
+      }
+      currentTrack = key;
+      listenStart = playing && key ? Date.now() : null;
+      scrobbled = false;
+
+      if (key && playing) {
+        chrome.runtime.sendMessage({
+          type: "SCROBBLE_START",
+          data: { artist, track, platform: "soundcloud", threshold: SCROBBLE_THRESHOLD },
+        });
+      }
+    }
+
+    if (!playing) {
+      if (listenStart) {
+        chrome.runtime.sendMessage({
+          type: "SCROBBLE_PAUSED",
+          data: { platform: "soundcloud" },
+        });
+      }
+      listenStart = null;
+      return;
+    }
+
+    if (playing && key && !listenStart && !scrobbled) {
+      listenStart = Date.now();
+      chrome.runtime.sendMessage({
+        type: "SCROBBLE_START",
+        data: { artist, track, platform: "soundcloud", threshold: SCROBBLE_THRESHOLD },
+      });
+    }
+
+    if (playing && listenStart && !scrobbled) {
+      const elapsed = Date.now() - listenStart;
+      chrome.runtime.sendMessage({
+        type: "SCROBBLE_PROGRESS",
+        data: {
+          artist, track, platform: "soundcloud",
+          elapsed, threshold: SCROBBLE_THRESHOLD,
+          percent: Math.min(100, Math.round((elapsed / SCROBBLE_THRESHOLD) * 100)),
+        },
+      });
+
+      if (elapsed >= SCROBBLE_THRESHOLD) {
+        scrobbled = true;
         chrome.runtime.sendMessage({
           type: "TRACK_DETECTED",
           data: { artist, track, platform: "soundcloud" },
@@ -42,6 +107,6 @@
     }
   }
 
-  setInterval(detectTrack, 3000);
-  setTimeout(detectTrack, 2000);
+  setInterval(detectAndScrobble, POLL_INTERVAL);
+  setTimeout(detectAndScrobble, 1000);
 })();
