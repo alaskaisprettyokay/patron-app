@@ -1,6 +1,7 @@
 // Patron Service Worker — handles tip requests from content scripts
 
-const API_BASE = "https://patron.xyz"; // Change to localhost:3000 for dev
+// Default to localhost for dev; configure in extension options for production
+const API_BASE = "http://localhost:3000";
 const TIP_AMOUNT = 0.05;
 
 // Track the last tipped track to avoid double-tipping
