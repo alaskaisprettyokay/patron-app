@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Providers } from "./providers";
+import ConnectButtonWrapper from "@/components/ConnectButtonWrapper";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 
@@ -39,7 +40,7 @@ export default function RootLayout({
                   >
                     Artists
                   </a>
-                  <ConnectButton />
+                  <ConnectButtonWrapper />
                 </div>
               </div>
             </div>
@@ -50,23 +51,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-function ConnectButton() {
-  return (
-    <div id="connect-button">
-      <ClientConnectButton />
-    </div>
-  );
-}
-
-import dynamic from "next/dynamic";
-const ClientConnectButton = dynamic(
-  () =>
-    import("@rainbow-me/rainbowkit").then((mod) => {
-      const { ConnectButton } = mod;
-      return function RainbowButton() {
-        return <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />;
-      };
-    }),
-  { ssr: false }
-);
