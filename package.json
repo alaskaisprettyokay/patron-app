@@ -1,0 +1,10 @@
+{
+  "name": "patron",
+  "private": true,
+  "description": "Music micropayments — detect what you're listening to, tip artists directly",
+  "scripts": {
+    "dev": "cd apps/web && npm run dev",
+    "build": "cd apps/web && npm run build",
+    "extension:build": "cd apps/extension && npm run build"
+  }
+}
