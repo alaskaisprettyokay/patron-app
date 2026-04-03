@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patron</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 320px;
+      min-height: 200px;
+      background: #0a0a0a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1f1f1f;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #36b2f8, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+    .status-dot.inactive { background: #4b5563; }
+    .current-track {
+      background: #111;
+      border: 1px solid #1f1f1f;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .track-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .track-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .artist-name {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .tip-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 11px;
+    }
+    .tip-status.success { color: #10b981; }
+    .tip-status.pending { color: #f59e0b; }
+    .tip-status.error { color: #ef4444; }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      background: #111;
+      border: 1px solid #1f1f1f;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: #6b7280;
+    }
+    .stat-value.green { color: #10b981; }
+    .link {
+      display: block;
+      text-align: center;
+      font-size: 12px;
+      color: #36b2f8;
+      text-decoration: none;
+      padding: 8px;
+    }
+    .link:hover { text-decoration: underline; }
+    .empty {
+      text-align: center;
+      padding: 24px 0;
+      color: #6b7280;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="logo">Patron</span>
+    <span class="status-dot" id="statusDot"></span>
+  </div>
+
+  <div id="content">
+    <div class="empty">
+      <p>Play music in your browser to start tipping artists.</p>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value green" id="totalTipped">$0.00</div>
+      <div class="stat-label">Total tipped</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="tipCount">0</div>
+      <div class="stat-label">Tracks tipped</div>
+    </div>
+  </div>
+
+  <a href="https://patron.xyz/dashboard" target="_blank" class="link">
+    Open Dashboard
+  </a>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Patron — Music Micropayments",
+  "version": "0.1.0",
+  "description": "Auto-tip artists when you listen to music. Detects tracks on Spotify, SoundCloud, Bandcamp, and YouTube Music.",
+  "permissions": ["storage", "tabs", "activeTab"],
+  "host_permissions": [
+    "https://open.spotify.com/*",
+    "https://soundcloud.com/*",
+    "https://*.bandcamp.com/*",
+    "https://music.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://open.spotify.com/*"],
+      "js": ["content/spotify.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://soundcloud.com/*"],
+      "js": ["content/soundcloud.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.bandcamp.com/*"],
+      "js": ["content/bandcamp.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["content/youtube-music.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  }
+}

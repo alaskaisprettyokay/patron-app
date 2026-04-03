@@ -1,0 +1,10 @@
+{
+  "name": "@patron/extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Patron Chrome Extension — Auto-tip artists when you listen to music",
+  "scripts": {
+    "build": "echo 'Extension uses plain JS — no build step needed'",
+    "dev": "echo 'Load the extension directory in chrome://extensions (Developer mode)'"
+  }
+}
