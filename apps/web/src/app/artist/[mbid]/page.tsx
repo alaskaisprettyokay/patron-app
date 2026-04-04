@@ -1,53 +1,25 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
-import { useReadContract, usePublicClient, useChainId } from "wagmi";
+import { useEffect, useState } from "react";
+import { useReadContract } from "wagmi";
 import { getArtistDetails, getArtistUrls, type MBArtistDetails } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
 import { REGISTRY_ADDRESS, ONDA_REGISTRY_ABI } from "@/lib/contracts";
 import { formatENSName } from "@/lib/ens";
-import { parseAbiItem, formatUnits } from "viem";
-
-interface GiftLog {
-  listener: string;
-  amount: bigint;
-  txHash: string;
-  blockNumber: bigint;
-  timestamp?: number;
-}
-
-function timeAgo(ts: number): string {
-  const seconds = Math.floor((Date.now() - ts) / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
-}
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
-const TIPPED_EVENT = parseAbiItem(
-  "event Tipped(address indexed listener, bytes32 indexed mbidHash, uint256 amount)"
-);
-
 export default function ArtistPage() {
   const params = useParams();
   const mbid = params.mbid as string;
   const mbidHash = mbidToBytes32(mbid);
-  const publicClient = usePublicClient();
-  const chainId = useChainId();
 
   const [artist, setArtist] = useState<MBArtistDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [giftLogs, setGiftLogs] = useState<GiftLog[]>([]);
-  const [giftsLoading, setGiftsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -60,90 +32,12 @@ export default function ArtistPage() {
       .finally(() => setLoading(false));
   }, [mbid]);
 
-  // Fetch on-chain Tipped events client-side
-  useEffect(() => {
-    if (!publicClient) {
-      console.log("[onda] waiting for public client...");
-      return;
-    }
-
-    let cancelled = false;
-
-    async function fetchGiftLogs() {
-      try {
-        console.log("[onda] fetching Tipped logs for", mbid, "on chain", chainId);
-
-        // Try fetching from block 0; if that fails, try last N blocks
-        let logs;
-        try {
-          logs = await publicClient!.getLogs({
-            address: ESCROW_ADDRESS,
-            event: TIPPED_EVENT,
-            args: { mbidHash: mbidHash as `0x${string}` },
-            fromBlock: 0n,
-            toBlock: "latest",
-          });
-        } catch (err) {
-          console.warn("[onda] full range getLogs failed, trying recent blocks:", err);
-          const currentBlock = await publicClient!.getBlockNumber();
-          logs = await publicClient!.getLogs({
-            address: ESCROW_ADDRESS,
-            event: TIPPED_EVENT,
-            args: { mbidHash: mbidHash as `0x${string}` },
-            fromBlock: currentBlock > 50000n ? currentBlock - 50000n : 0n,
-            toBlock: "latest",
-          });
-        }
-
-        if (cancelled) return;
-        console.log("[onda] found", logs.length, "Tipped events");
-
-        // Get block timestamps for the logs (batch to avoid too many RPC calls)
-        const uniqueBlocks = [...new Set(logs.map((l) => l.blockNumber!))];
-        const blockTimestamps = new Map<bigint, number>();
-
-        // Fetch timestamps in parallel, max 10 at a time
-        for (let i = 0; i < uniqueBlocks.length; i += 10) {
-          const batch = uniqueBlocks.slice(i, i + 10);
-          const results = await Promise.allSettled(
-            batch.map((bn) => publicClient!.getBlock({ blockNumber: bn }))
-          );
-          results.forEach((r, idx) => {
-            if (r.status === "fulfilled") {
-              blockTimestamps.set(batch[idx], Number(r.value.timestamp) * 1000);
-            }
-          });
-        }
-
-        if (cancelled) return;
-
-        const gifts: GiftLog[] = logs.map((log) => ({
-          listener: log.args.listener as string,
-          amount: log.args.amount as bigint,
-          blockNumber: log.blockNumber!,
-          txHash: log.transactionHash!,
-          timestamp: blockTimestamps.get(log.blockNumber!),
-        }));
-
-        // newest first
-        gifts.reverse();
-        setGiftLogs(gifts);
-      } catch (err) {
-        console.error("[onda] failed to fetch gift logs:", err);
-      } finally {
-        if (!cancelled) setGiftsLoading(false);
-      }
-    }
-
-    fetchGiftLogs();
-    return () => { cancelled = true; };
-  }, [publicClient, mbidHash, chainId, mbid]);
-
   const { data: artistInfo } = useReadContract({
     address: ESCROW_ADDRESS,
     abi: ONDA_ESCROW_ABI,
     functionName: "getArtistInfo",
     args: [mbidHash],
+    query: { refetchInterval: 10000 },
   });
 
   const { data: subname } = useReadContract({
@@ -158,39 +52,6 @@ export default function ArtistPage() {
     abi: ONDA_ESCROW_ABI,
     functionName: "defaultTipAmount",
   });
-
-  const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
-  const tipSize = (defaultTipAmount as bigint) || 10000n;
-  const onChainGiftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
-  const giftCount = Math.max(onChainGiftCount, giftLogs.length);
-
-  const uniqueSupporters = useMemo(() => {
-    const addrs = new Set(giftLogs.map((g) => g.listener.toLowerCase()));
-    return addrs.size;
-  }, [giftLogs]);
-
-  const activityDays = useMemo(() => {
-    const giftsWithTime = giftLogs.filter((g) => g.timestamp);
-    const now = new Date();
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-      const dayEnd = dayStart + 86400000;
-      const count = giftsWithTime.filter(
-        (g) => g.timestamp! >= dayStart && g.timestamp! < dayEnd
-      ).length;
-      days.push({
-        label: d.toLocaleDateString("en", { weekday: "short" }).toLowerCase(),
-        count,
-        isToday: i === 0,
-      });
-    }
-    return days;
-  }, [giftLogs]);
-
-  const maxDayCount = Math.max(...activityDays.map((d) => d.count), 1);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -220,8 +81,14 @@ export default function ArtistPage() {
   const urls = getArtistUrls(artist.relations);
   const wallet = artistInfo ? (artistInfo as [string, boolean, bigint])[0] : undefined;
   const verified = artistInfo ? (artistInfo as [string, boolean, bigint])[1] : false;
+  const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
   const isClaimed = wallet && wallet !== "0x0000000000000000000000000000000000000000";
   const ensName = subname ? formatENSName(subname as string) : null;
+
+  // Derive gift stats from on-chain state
+  const tipSize = (defaultTipAmount as bigint) || 10000n; // $0.01 in 6-decimal USDC
+  const giftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
+  const perGift = giftCount > 0 ? Number(unclaimed) / giftCount / 1_000_000 : 0;
 
   return (
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">
@@ -269,92 +136,46 @@ export default function ArtistPage() {
         </div>
         <div className="border-l-2 border-ink pl-4">
           <div className="font-mono text-2xl font-bold">
-            {giftsLoading ? "..." : uniqueSupporters}
-          </div>
-          <div className="text-sm text-ink-light">supporters</div>
-        </div>
-        <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">
-            {giftCount > 0
-              ? `$${(Number(formatUSDC(unclaimed as bigint)) / giftCount).toFixed(2)}`
-              : "—"}
+            ${perGift > 0 ? perGift.toFixed(2) : "—"}
           </div>
           <div className="text-sm text-ink-light">per gift</div>
         </div>
+        <div className="border-l-2 border-ink pl-4">
+          <div className="text-2xl font-bold">
+            {isClaimed && verified ? (
+              <span className="text-onda">active</span>
+            ) : isClaimed ? (
+              <span className="text-ink-light">pending</span>
+            ) : (
+              <span className="text-ink-faint">unclaimed</span>
+            )}
+          </div>
+          <div className="text-sm text-ink-light">status</div>
+        </div>
       </div>
 
-      {/* Activity chart */}
-      {giftLogs.some((g) => g.timestamp) && (
+      {/* Visual — gift milestones */}
+      {giftCount > 0 && (
         <div className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">activity</h2>
-          <div className="flex items-end gap-2 h-24">
-            {activityDays.map((day) => {
-              const height = maxDayCount > 0 ? (day.count / maxDayCount) * 100 : 0;
-              return (
-                <div key={day.label} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="w-full flex items-end justify-center" style={{ height: "64px" }}>
-                    {day.count > 0 ? (
-                      <div
-                        className={`w-full max-w-[44px] transition-all duration-300 ${
-                          day.isToday ? "bg-onda" : "bg-ink/15"
-                        }`}
-                        style={{ height: `${Math.max(height, 6)}%` }}
-                        title={`${day.count} gift${day.count !== 1 ? "s" : ""}`}
-                      />
-                    ) : (
-                      <div className="w-full max-w-[44px] bg-rule/40" style={{ height: "2px" }} />
-                    )}
-                  </div>
-                  <span
-                    className={`text-[10px] font-mono ${
-                      day.isToday ? "text-onda font-bold" : "text-ink-faint"
-                    }`}
-                  >
-                    {day.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Recent gifts from on-chain events */}
-      {giftLogs.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">recent gifts</h2>
-          <div>
-            {giftLogs.slice(0, 15).map((gift, i) => (
+          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">milestones</h2>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(giftCount, 50) }).map((_, i) => (
               <div
-                key={`${gift.txHash}-${i}`}
-                className="flex items-baseline justify-between py-3 border-b border-rule last:border-0"
-              >
-                <div className="min-w-0 mr-4">
-                  <span className="font-mono text-sm text-ink-light">
-                    {truncateAddress(gift.listener)}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-3 shrink-0 text-sm">
-                  <a
-                    href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-onda font-bold font-mono hover:underline"
-                  >
-                    ${formatUnits(gift.amount, 6)}
-                  </a>
-                  {gift.timestamp && (
-                    <span className="text-ink-faint text-xs">{timeAgo(gift.timestamp)}</span>
-                  )}
-                </div>
-              </div>
+                key={i}
+                className={`h-6 flex-1 max-w-[12px] ${
+                  i === giftCount - 1 ? "bg-onda" : "bg-ink/15"
+                }`}
+                title={`gift #${i + 1}`}
+              />
             ))}
+            {giftCount > 50 && (
+              <span className="text-xs text-ink-faint ml-2 font-mono">+{giftCount - 50}</span>
+            )}
+          </div>
+          <div className="text-xs text-ink-faint mt-2">
+            {giftCount} gift{giftCount !== 1 ? "s" : ""} at ${perGift.toFixed(2)} each
           </div>
         </div>
-      )}
-
-      {giftsLoading && (
-        <div className="mb-12 text-ink-faint text-sm">loading gift history...</div>
       )}
 
       {/* Wallet (claimed artists) */}
