@@ -3,111 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       width: 320px;
-      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-family: 'Inter', system-ui, sans-serif;
       background: #f0eae0;
       color: #151311;
-      padding: 0;
-      font-size: 10px;
+      font-size: 13px;
       line-height: 1.4;
-      /* Grain texture */
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
     }
 
-    /* Ink header — inverted top bar */
+    /* Inverted header */
     .header {
       background: #151311;
       color: #f0eae0;
-      padding: 10px 16px;
+      padding: 12px 16px;
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
+      align-items: center;
     }
     .logo {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .header-total {
+      font-family: 'JetBrains Mono', monospace;
       font-size: 14px;
       font-weight: 700;
-    }
-    .header-stats {
-      font-size: 9px;
       color: #c4813a;
-      font-weight: 500;
     }
 
-    .body-content {
-      padding: 12px 16px;
-    }
-
-    /* Stats line */
-    .stats-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 1px 0;
-      color: #8a847d;
-      font-size: 9px;
-    }
-    .stats-row strong { color: #151311; }
-    .stats-row .accent { color: #c4813a; font-weight: 700; }
-
-    /* Divider — dashed receipt style */
-    .divider {
-      border: none;
-      height: 1px;
-      margin: 8px 0;
-      background-image: repeating-linear-gradient(
-        to right,
-        #b5ad9f 0, #b5ad9f 4px,
-        transparent 4px, transparent 8px
-      );
-    }
+    .body-content { padding: 14px 16px; }
 
     /* Section label */
     .label {
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       color: #8a847d;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
+      font-weight: 500;
     }
 
     /* Now Playing */
-    .now-playing {
-      padding: 4px 0;
-    }
+    .now-playing { padding: 0 0 10px 0; }
     .artist-name {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 700;
       color: #151311;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       line-height: 1.15;
+      letter-spacing: -0.3px;
     }
     .track-name {
-      font-size: 10px;
+      font-size: 13px;
       color: #5c5650;
       margin-top: 2px;
     }
     .platform-badge {
       display: inline-block;
-      font-size: 7px;
-      padding: 2px 5px;
+      font-size: 9px;
+      padding: 2px 6px;
       border: 1px solid #cdc5b8;
       color: #8a847d;
-      margin-top: 4px;
-      letter-spacing: 1px;
+      margin-top: 6px;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
+      font-weight: 500;
     }
 
-    /* Progress bar */
-    .progress-container {
-      margin-top: 6px;
-    }
+    /* Progress */
+    .progress-container { margin-top: 10px; }
     .progress-bar {
-      height: 2px;
+      height: 3px;
       background: #cdc5b8;
       overflow: hidden;
     }
@@ -121,88 +94,103 @@
     .progress-text {
       display: flex;
       justify-content: space-between;
-      font-size: 8px;
+      font-size: 10px;
       color: #8a847d;
-      margin-top: 2px;
+      margin-top: 3px;
+      font-family: 'JetBrains Mono', monospace;
     }
 
     /* Gift result */
     .gift-result {
-      margin-top: 5px;
-      font-size: 10px;
+      margin-top: 8px;
+      font-size: 13px;
       font-weight: 700;
     }
     .gift-result.sent { color: #c4813a; }
     .gift-result.escrowed { color: #5c5650; }
     .gift-result a { color: inherit; }
 
-    /* Gift detail */
     .gift-detail {
-      font-size: 9px;
+      font-size: 12px;
       color: #5c5650;
-      margin-top: 3px;
-      line-height: 1.5;
+      margin-top: 4px;
     }
-    .gift-detail .diamond { color: #c4813a; font-weight: 700; }
 
-    /* History / receipt items */
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid #cdc5b8;
+      margin: 12px 0;
+    }
+
+    /* History */
     .history-item {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      padding: 3px 0;
-      border-bottom: 1px solid rgba(205, 197, 184, 0.4);
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(205, 197, 184, 0.5);
     }
     .history-item:last-child { border-bottom: none; }
     .history-item .h-artist {
-      color: #151311;
       font-weight: 700;
+      font-size: 13px;
+    }
+    .history-item .h-track {
+      color: #8a847d;
       font-size: 11px;
     }
-    .history-item .h-track { color: #8a847d; font-size: 8px; }
-    .history-item .amount { color: #c4813a; font-weight: 700; text-align: right; white-space: nowrap; }
+    .history-item .amount {
+      color: #c4813a;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      white-space: nowrap;
+    }
     .history-item .amount a { color: inherit; text-decoration: none; }
     .history-item .amount a:hover { text-decoration: underline; }
 
     .empty-state {
-      padding: 12px 0;
+      padding: 16px 0;
       color: #8a847d;
-      font-size: 9px;
+      font-size: 12px;
     }
 
-    /* Wallet section */
-    .wallet-section {
-      padding: 2px 0;
-    }
+    /* Wallet */
+    .wallet-section { padding: 0; }
     .wallet-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1px 0;
-      font-size: 9px;
+      padding: 3px 0;
+      font-size: 12px;
     }
     .wallet-label { color: #8a847d; }
     .wallet-addr {
       color: #5c5650;
       cursor: pointer;
-      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
     }
     .wallet-addr:hover { color: #c4813a; }
-    .wallet-val { color: #151311; font-weight: 500; }
-    .wallet-val.funded { color: #c4813a; font-weight: 700; }
+    .wallet-val {
+      color: #151311;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .wallet-val.funded { color: #c4813a; }
     .wallet-val.empty { color: #8a847d; }
     .wallet-btn {
       width: 100%;
       background: #151311;
       color: #f0eae0;
       border: none;
-      padding: 7px;
+      padding: 10px;
       font-family: inherit;
-      font-size: 9px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 6px;
-      letter-spacing: 0.8px;
+      margin-top: 8px;
     }
     .wallet-btn:hover { background: #c4813a; }
     .wallet-btn:disabled { opacity: 0.3; cursor: default; }
@@ -211,48 +199,52 @@
       background: transparent;
       color: #5c5650;
       border: 1px solid #cdc5b8;
-      padding: 4px;
+      padding: 6px;
       font-family: inherit;
-      font-size: 8px;
+      font-size: 11px;
       cursor: pointer;
-      margin-top: 4px;
+      margin-top: 6px;
     }
     .wallet-btn-sm:hover { border-color: #151311; color: #151311; }
-    .wallet-fund { margin-top: 5px; }
-    .fund-label { font-size: 8px; color: #8a847d; margin-bottom: 2px; letter-spacing: 0.8px; text-transform: uppercase; }
+    .wallet-fund { margin-top: 8px; }
+    .fund-label {
+      font-size: 10px;
+      color: #8a847d;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
     .fund-addr {
-      font-size: 8px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
       color: #5c5650;
       word-break: break-all;
       background: #e5ded2;
-      padding: 5px;
+      padding: 8px;
       border: 1px solid #cdc5b8;
-      line-height: 1.4;
     }
     .wallet-ready {
       display: inline-block;
-      color: #c4813a;
-      font-size: 8px;
+      background: #c4813a;
+      color: #f0eae0;
+      font-size: 10px;
       font-weight: 700;
-      margin-top: 5px;
-      border: 2px solid #c4813a;
-      padding: 2px 6px;
-      letter-spacing: 1px;
+      padding: 3px 8px;
+      margin-top: 8px;
       text-transform: uppercase;
-      transform: rotate(-1deg);
+      letter-spacing: 0.5px;
     }
-    .wallet-error { color: #c4813a; font-size: 9px; }
+    .wallet-error { color: #c4813a; font-size: 12px; }
 
     /* Footer */
     .footer {
-      padding: 8px 16px;
+      padding: 10px 16px;
       border-top: 1px solid #cdc5b8;
     }
     .footer a {
-      font-size: 8px;
+      font-size: 11px;
       color: #8a847d;
       text-decoration: none;
-      letter-spacing: 0.8px;
     }
     .footer a:hover { color: #151311; }
   </style>
@@ -260,21 +252,10 @@
 <body>
   <div class="header">
     <div class="logo">onda</div>
-    <div class="header-stats" id="total-given">$0.00</div>
+    <div class="header-total" id="total-given">$0.00</div>
   </div>
 
   <div class="body-content">
-    <div class="stats-row">
-      <span>total given</span>
-      <strong class="accent" id="total-given-detail">$0.00</strong>
-    </div>
-    <div class="stats-row">
-      <span>tracks</span>
-      <strong id="gift-count">0</strong>
-    </div>
-
-    <hr class="divider">
-
     <div id="wallet-section" class="wallet-section">
       <!-- Filled by JS -->
     </div>
@@ -306,8 +287,7 @@
         <div id="history-list"></div>
       </div>
 
-      <div class="empty-state" id="empty-state">
-      </div>
+      <div class="empty-state" id="empty-state"></div>
     </div>
   </div>
 

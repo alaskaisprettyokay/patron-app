@@ -2,73 +2,74 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-[calc(100vh-3rem)]">
-      {/* Hero — poster / zine feel */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-8">
-        <h1 className="text-display font-bold max-w-md">
+    <div className="min-h-[calc(100vh-3.5rem)]">
+      {/* Hero */}
+      <section className="max-w-4xl mx-auto px-5 sm:px-8 pt-20 pb-16">
+        <h1 className="text-5xl sm:text-7xl font-bold tracking-tight leading-[0.95] mb-6 max-w-lg">
           every play
           <br />
-          sends a<br />
-          <span className="highlight">wave.</span>
+          sends a
+          <br />
+          <span className="text-onda">wave.</span>
         </h1>
-      </section>
-
-      {/* One-liner in inverted block */}
-      <section className="ink-block">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
-          <p className="font-mono text-sm">
-            Spotify sends artists <span className="text-onda">$0.003</span> per stream.
-            onda lets you give them <span className="text-onda">$0.01</span> directly.
-          </p>
-          <Link href="/dashboard" className="font-mono text-xs text-paper border border-paper/30 px-4 py-2 hover:bg-paper hover:text-ink transition-all shrink-0">
+        <p className="text-ink-light text-lg max-w-md mb-8 leading-snug">
+          Spotify sends artists $0.003 per stream.
+          onda lets you give them $0.01 directly.
+        </p>
+        <div className="flex gap-3">
+          <Link href="/dashboard" className="btn-primary">
             start listening
+          </Link>
+          <Link href="/claim" className="btn-secondary">
+            i'm an artist
           </Link>
         </div>
       </section>
 
-      {/* Numbers — big, monospace, impactful */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <div className="big-number">$0.01</div>
-            <div className="section-label mt-1">per listen</div>
-          </div>
-          <div>
-            <div className="big-number">100%</div>
-            <div className="section-label mt-1">to artist</div>
-          </div>
-          <div>
-            <div className="big-number">0</div>
-            <div className="section-label mt-1">middlemen</div>
+      {/* Numbers — big monospace in inverted bar */}
+      <section className="ink-block">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 py-8">
+          <div className="grid grid-cols-3 gap-6">
+            <div>
+              <div className="font-mono text-3xl sm:text-4xl font-bold tracking-tight">$0.01</div>
+              <div className="text-sm text-paper/50 mt-1">per listen</div>
+            </div>
+            <div>
+              <div className="font-mono text-3xl sm:text-4xl font-bold tracking-tight">100%</div>
+              <div className="text-sm text-paper/50 mt-1">to the artist</div>
+            </div>
+            <div>
+              <div className="font-mono text-3xl sm:text-4xl font-bold tracking-tight">0</div>
+              <div className="text-sm text-paper/50 mt-1">middlemen</div>
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="receipt-divider max-w-3xl mx-auto" />
-
-      {/* How it works — dense, numbered */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-        <div className="grid md:grid-cols-3 gap-8">
+      {/* How it works */}
+      <section className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
+        <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-10">How it works</h2>
+        <div className="grid md:grid-cols-3 gap-10">
           <div>
-            <div className="font-mono text-headline text-onda font-bold leading-none mb-2">01</div>
-            <h3 className="font-bold text-sm mb-1">listen to music</h3>
-            <p className="text-ink-light text-xs leading-relaxed">
+            <div className="text-5xl font-bold text-onda/20 leading-none mb-3">01</div>
+            <h3 className="text-lg font-bold mb-2">listen to music</h3>
+            <p className="text-ink-light text-sm leading-relaxed">
               Spotify, SoundCloud, Bandcamp, YouTube Music.
               onda detects what's playing.
             </p>
           </div>
           <div>
-            <div className="font-mono text-headline text-onda font-bold leading-none mb-2">02</div>
-            <h3 className="font-bold text-sm mb-1">gifts go out</h3>
-            <p className="text-ink-light text-xs leading-relaxed">
+            <div className="text-5xl font-bold text-onda/20 leading-none mb-3">02</div>
+            <h3 className="text-lg font-bold mb-2">gifts go out</h3>
+            <p className="text-ink-light text-sm leading-relaxed">
               each track sends a gift from your balance.
-              if the artist hasn't claimed yet, it waits.
+              if the artist hasn't claimed yet, it waits for them.
             </p>
           </div>
           <div>
-            <div className="font-mono text-headline text-onda font-bold leading-none mb-2">03</div>
-            <h3 className="font-bold text-sm mb-1">artists collect</h3>
-            <p className="text-ink-light text-xs leading-relaxed">
+            <div className="text-5xl font-bold text-onda/20 leading-none mb-3">03</div>
+            <h3 className="text-lg font-bold mb-2">artists collect</h3>
+            <p className="text-ink-light text-sm leading-relaxed">
               verify identity. receive gifts directly.
               no signup. no email. just money.
             </p>
@@ -76,81 +77,72 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="receipt-divider max-w-3xl mx-auto" />
-
-      {/* Extension preview — actual receipt */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex flex-col md:flex-row gap-8 items-start">
-          <div className="flex-1">
-            <div className="section-label mb-3">what you see</div>
-            <p className="text-ink-light text-sm leading-relaxed mb-4 max-w-xs">
-              the chrome extension sits in your toolbar.
-              open it and you see a receipt of what you've given,
-              printing in real time as you listen.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {["Spotify", "SoundCloud", "Bandcamp", "YouTube Music"].map(
-                (p) => (
-                  <span key={p} className="text-2xs font-mono border border-rule px-2 py-1">
+      {/* Extension preview + platforms */}
+      <section className="border-t border-rule">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
+          <div className="flex flex-col md:flex-row gap-12 items-start">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold mb-3">the extension sits in your toolbar</h2>
+              <p className="text-ink-light text-sm leading-relaxed mb-6 max-w-sm">
+                it watches what you listen to and sends a gift to every artist.
+                you don't have to do anything. just listen.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {["Spotify", "SoundCloud", "Bandcamp", "YouTube Music"].map((p) => (
+                  <span key={p} className="text-xs border border-rule px-3 py-1.5 hover:border-ink transition-colors">
                     {p}
                   </span>
-                )
-              )}
-            </div>
-          </div>
-          {/* Mock receipt */}
-          <div className="w-[260px] shrink-0 bg-paper-dark border border-rule p-4 font-mono text-xs shadow-[4px_4px_0_0_rgba(0,0,0,0.08)]">
-            <div className="font-bold text-base mb-2">onda</div>
-            <div className="receipt-divider !my-2" />
-            <div className="section-label mb-1.5">now listening</div>
-            <div className="font-bold text-lg leading-tight">Burial</div>
-            <div className="text-ink-light text-xs">Untrue -- "Archangel"</div>
-            <div className="mt-3 space-y-1 text-xs text-ink-light">
-              <div><span className="text-onda font-bold">&#9670;</span> sent $0.01</div>
-              <div><span className="text-onda font-bold">&#9670;</span> total given: $1.40</div>
-            </div>
-            <div className="mt-2 text-2xs text-ink-faint">
-              you are 1 of 47 supporters
-            </div>
-            <div className="receipt-divider !my-2" />
-            <div className="space-y-1 text-2xs">
-              <div className="flex justify-between">
-                <span>Avalon Emerson</span>
-                <span className="text-onda">$0.01</span>
+                ))}
               </div>
-              <div className="flex justify-between">
-                <span>DJ Python</span>
-                <span className="text-onda">$0.01</span>
+            </div>
+            {/* Mini popup mock */}
+            <div className="w-[240px] shrink-0 border border-rule bg-paper-dark shadow-[6px_6px_0_0_rgba(21,19,17,0.06)]">
+              <div className="bg-ink text-paper px-4 py-2.5 flex justify-between items-baseline">
+                <span className="font-bold text-sm">onda</span>
+                <span className="text-onda text-xs font-mono">$1.40</span>
               </div>
-              <div className="flex justify-between">
-                <span>Laurel Halo</span>
-                <span className="text-onda">$0.01</span>
+              <div className="p-4">
+                <div className="text-xs text-ink-faint uppercase tracking-widest mb-2">now listening</div>
+                <div className="font-bold text-lg leading-tight">Burial</div>
+                <div className="text-ink-light text-sm">Untrue -- "Archangel"</div>
+                <div className="mt-3 border-t border-rule pt-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-ink-light">sent</span>
+                    <span className="text-onda font-bold">$0.01</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-light">total to Burial</span>
+                    <span className="font-mono">$1.40</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-light">supporters</span>
+                    <span className="font-mono">47</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Artist claim CTA — inverted block */}
-      <section className="ink-block mt-4">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="font-bold text-lg mb-0.5">are you an artist?</div>
-              <p className="text-paper/60 text-xs font-mono">
-                people might already be giving to you. claim your profile.
-              </p>
-            </div>
-            <Link href="/claim" className="font-mono text-xs border border-paper/30 px-5 py-2.5 hover:bg-paper hover:text-ink transition-all shrink-0 text-center">
-              claim profile
-            </Link>
+      {/* Artist CTA */}
+      <section className="ink-block">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div>
+            <h2 className="text-2xl font-bold mb-1">are you an artist?</h2>
+            <p className="text-paper/60 text-sm">
+              people might already be giving to you. claim your profile.
+            </p>
           </div>
+          <Link href="/claim" className="border border-paper/30 px-6 py-3 text-sm hover:bg-paper hover:text-ink transition-all text-center shrink-0">
+            claim profile
+          </Link>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-        <p className="font-mono text-sm text-ink-light mb-4 max-w-sm">
+      {/* Final CTA */}
+      <section className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
+        <p className="text-ink-light text-lg mb-5 max-w-md leading-snug">
           add some funds and onda handles the rest.
           every artist you listen to gets something.
         </p>
@@ -160,14 +152,12 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-rule py-4">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex justify-between items-center">
-          <span className="text-2xs text-ink-faint font-mono tracking-receipt">
-            buena onda
-          </span>
+      <footer className="border-t border-rule py-5">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 flex justify-between items-center">
+          <span className="text-xs text-ink-faint">buena onda</span>
           <a
             href="https://github.com/alaskaisprettyokay/patron-app"
-            className="text-2xs text-ink-faint hover:text-ink transition-colors font-mono"
+            className="text-xs text-ink-faint hover:text-ink transition-colors"
           >
             source
           </a>

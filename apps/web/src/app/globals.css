@@ -5,19 +5,17 @@
 @layer base {
   body {
     @apply bg-paper text-ink;
-    font-feature-settings: "ss01", "ss02";
     -webkit-font-smoothing: auto;
-    -moz-osx-font-smoothing: auto;
   }
 
-  /* Heavy grain — risograph / photocopy texture */
+  /* Grain */
   body::after {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 9999;
-    opacity: 0.45;
+    opacity: 0.35;
     mix-blend-mode: multiply;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
     background-size: 200px 200px;
@@ -29,13 +27,8 @@
 }
 
 @layer components {
-  /* Ink block — inverted sections */
-  .ink-block {
-    @apply bg-ink text-paper px-4 py-3;
-  }
-
   .btn-primary {
-    @apply bg-ink text-paper font-mono text-xs font-medium py-2.5 px-5 border border-ink transition-all duration-75;
+    @apply inline-block bg-ink text-paper text-sm font-medium py-2.5 px-6 border border-ink transition-all duration-75;
   }
   .btn-primary:hover {
     @apply bg-onda border-onda;
@@ -45,48 +38,14 @@
   }
 
   .btn-secondary {
-    @apply bg-transparent text-ink font-mono text-xs font-medium py-2.5 px-5 border border-ink transition-all duration-75;
+    @apply inline-block bg-transparent text-ink text-sm font-medium py-2.5 px-6 border border-ink transition-all duration-75;
   }
   .btn-secondary:hover {
     @apply bg-ink text-paper;
   }
 
-  .card {
-    @apply border border-rule p-4;
-  }
-
-  .section-label {
-    @apply text-2xs font-mono uppercase tracking-receipt text-ink-faint;
-  }
-
-  .mono-value {
-    @apply font-mono tabular-nums tracking-tight;
-  }
-
-  /* Big number display */
-  .big-number {
-    @apply font-mono text-3xl font-bold tracking-tight leading-none;
-  }
-
-  /* Stamp — for verification badges etc */
-  .stamp {
-    @apply inline-block border-2 border-current px-2 py-0.5 text-2xs font-mono uppercase tracking-receipt rotate-[-2deg];
-  }
-
-  /* Marker highlight */
-  .highlight {
-    background: linear-gradient(to top, rgba(196, 129, 58, 0.25) 40%, transparent 40%);
-  }
-
-  /* Dashed receipt divider */
-  .receipt-divider {
-    @apply border-0 h-px my-4;
-    background-image: repeating-linear-gradient(
-      to right,
-      #b5ad9f 0,
-      #b5ad9f 4px,
-      transparent 4px,
-      transparent 8px
-    );
+  /* Inverted section */
+  .ink-block {
+    @apply bg-ink text-paper;
   }
 }

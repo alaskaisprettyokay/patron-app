@@ -43,37 +43,37 @@ export function GiftFeed() {
 
   if (gifts.length === 0) {
     return (
-      <div className="py-4 text-ink-faint text-xs font-mono">
+      <div className="py-6 text-ink-faint text-sm">
         nothing yet. play music with the extension installed.
       </div>
     );
   }
 
   return (
-    <div className="font-mono text-xs">
+    <div>
       {gifts.slice(0, 10).map((gift, i) => (
         <div
           key={`${gift.timestamp}-${i}`}
-          className="flex items-baseline justify-between py-1.5 border-b border-rule/50 last:border-0"
+          className="flex items-baseline justify-between py-3 border-b border-rule last:border-0"
         >
           <div className="min-w-0 mr-4">
-            <span className="font-bold text-sm">{gift.artist}</span>
-            <span className="text-ink-faint ml-2 text-2xs">{gift.track}</span>
+            <span className="font-bold">{gift.artist}</span>
+            <span className="text-ink-faint text-sm ml-2">{gift.track}</span>
           </div>
-          <div className="flex items-baseline gap-2 shrink-0">
+          <div className="flex items-baseline gap-3 shrink-0 text-sm">
             {gift.txHash ? (
               <a
                 href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-onda hover:underline font-bold"
+                className="text-onda font-bold font-mono hover:underline"
               >
                 ${gift.amount?.toFixed(2) || "0.01"}
               </a>
             ) : (
-              <span>${gift.amount?.toFixed(2) || "0.01"}</span>
+              <span className="font-mono">${gift.amount?.toFixed(2) || "0.01"}</span>
             )}
-            <span className="text-ink-faint text-2xs">{timeAgo(gift.timestamp)}</span>
+            <span className="text-ink-faint text-xs">{timeAgo(gift.timestamp)}</span>
           </div>
         </div>
       ))}

@@ -28,22 +28,16 @@ export default function RootLayout({
       <body className="min-h-screen">
         <Providers>
           <nav className="border-b border-rule">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6">
-              <div className="flex justify-between items-center h-12">
-                <a href="/" className="font-mono text-base font-bold">
+            <div className="max-w-4xl mx-auto px-5 sm:px-8">
+              <div className="flex justify-between items-center h-14">
+                <a href="/" className="text-lg font-bold tracking-tight">
                   onda
                 </a>
-                <div className="flex items-center gap-5">
-                  <a
-                    href="/dashboard"
-                    className="text-ink-faint hover:text-ink transition-colors text-xs font-mono"
-                  >
+                <div className="flex items-center gap-6">
+                  <a href="/dashboard" className="text-ink-light hover:text-ink transition-colors text-sm">
                     dashboard
                   </a>
-                  <a
-                    href="/claim"
-                    className="text-ink-faint hover:text-ink transition-colors text-xs font-mono"
-                  >
+                  <a href="/claim" className="text-ink-light hover:text-ink transition-colors text-sm">
                     claim
                   </a>
                   <ConnectButtonWrapper />

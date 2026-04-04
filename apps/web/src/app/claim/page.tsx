@@ -68,11 +68,8 @@ export default function ClaimPage() {
         }),
       });
       const data = await res.json();
-      if (data.verified) {
-        setStep("claim");
-      } else {
-        setError(data.error || "verification didn't work.");
-      }
+      if (data.verified) setStep("claim");
+      else setError(data.error || "verification didn't work.");
     } catch {
       setError("couldn't reach the server.");
     } finally {
@@ -105,13 +102,8 @@ export default function ClaimPage() {
         body: JSON.stringify({ mbidHash: mbidToBytes32(selectedArtist.id) }),
       });
       const data = await res.json();
-      if (data.success) {
-        setReleaseResult(data);
-        setStep("done");
-      } else {
-        setError(data.error || "something went wrong.");
-        setStep("claim");
-      }
+      if (data.success) { setReleaseResult(data); setStep("done"); }
+      else { setError(data.error || "something went wrong."); setStep("claim"); }
     } catch {
       setError("couldn't reach the server.");
       setStep("claim");
@@ -120,129 +112,112 @@ export default function ClaimPage() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
-        <div className="text-headline font-bold mb-2">claim</div>
-        <p className="text-ink-light text-sm font-mono">
+      <div className="max-w-4xl mx-auto px-5 sm:px-8 py-20">
+        <h1 className="text-4xl font-bold mb-3">claim</h1>
+        <p className="text-ink-light text-sm">
           sign in to claim your profile and receive gifts.
         </p>
       </div>
     );
   }
 
-  const steps: Step[] = ["search", "verify", "claim", "done"];
-  const stepIndex = steps.indexOf(step === "releasing" ? "done" : step);
-
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-      <div className="text-headline font-bold mb-1">claim</div>
-      <p className="text-ink-light text-xs font-mono mb-6">
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">
+      <h1 className="text-4xl font-bold mb-1">claim</h1>
+      <p className="text-ink-light text-sm mb-8">
         people have been giving to you. here's your money.
       </p>
 
-      {/* Progress — monospace stepper */}
-      <div className="flex items-center gap-0.5 mb-6 font-mono text-2xs">
-        {steps.map((s, i) => (
-          <div key={s} className="flex items-center">
-            <span
-              className={
-                stepIndex === i
-                  ? "text-ink font-bold"
-                  : stepIndex > i
-                  ? "text-onda"
-                  : "text-ink-faint"
-              }
-            >
-              {stepIndex > i ? "[x]" : `[${i + 1}]`} {s}
+      {/* Step indicator */}
+      <div className="flex gap-6 mb-8 text-sm">
+        {(["search", "verify", "claim", "done"] as Step[]).map((s, i) => {
+          const current = step === "releasing" ? "done" : step;
+          const idx = (["search", "verify", "claim", "done"] as Step[]).indexOf(current);
+          return (
+            <span key={s} className={`${idx === i ? "text-ink font-bold border-b-2 border-onda pb-1" : idx > i ? "text-onda" : "text-ink-faint"}`}>
+              {s}
             </span>
-            {i < 3 && <span className="text-rule-dark mx-1">--</span>}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {error && (
-        <div className="bg-onda-faint border-l-2 border-onda p-3 mb-4 text-onda text-xs font-mono">
+        <div className="bg-onda/10 border-l-4 border-onda p-4 mb-6 text-sm text-onda">
           {error}
         </div>
       )}
 
-      {/* Step 1: Search */}
+      {/* Search */}
       {step === "search" && (
         <div>
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-3 mb-6">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="artist name..."
-              className="flex-1 bg-transparent border-b-2 border-ink px-1 py-2 text-ink text-sm font-mono focus:outline-none placeholder:text-ink-faint"
+              className="flex-1 bg-transparent border-b-2 border-ink px-1 py-3 text-lg focus:outline-none placeholder:text-ink-faint"
             />
             <button onClick={handleSearch} disabled={searching} className="btn-primary">
               {searching ? "..." : "search"}
             </button>
           </div>
-          {results.length > 0 && (
-            <div>
-              {results.map((artist) => (
-                <button
-                  key={artist.id}
-                  onClick={() => handleSelectArtist(artist)}
-                  className="w-full text-left py-3 border-b border-rule hover:bg-paper-dark transition-colors block"
-                >
-                  <div className="font-bold text-base">{artist.name}</div>
-                  <div className="text-2xs text-ink-faint font-mono">
-                    {artist.disambiguation && <span>{artist.disambiguation} </span>}
-                    {artist.country && <span>({artist.country}) </span>}
-                    <span className="text-ink-faint/50">{artist.id}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          {results.length > 0 && results.map((artist) => (
+            <button
+              key={artist.id}
+              onClick={() => handleSelectArtist(artist)}
+              className="w-full text-left py-4 border-b border-rule hover:bg-paper-dark transition-colors block"
+            >
+              <div className="font-bold text-lg">{artist.name}</div>
+              <div className="text-xs text-ink-faint">
+                {artist.disambiguation && <span>{artist.disambiguation} </span>}
+                {artist.country && <span>({artist.country}) </span>}
+                <span className="font-mono">{artist.id}</span>
+              </div>
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Step 2: Verify */}
+      {/* Verify */}
       {step === "verify" && selectedArtist && (
         <div>
-          <div className="section-label mb-3">
-            verify you're {selectedArtist.name}
-          </div>
+          <h2 className="text-xl font-bold mb-4">verify you're {selectedArtist.name}</h2>
           {verifyUrl ? (
             <>
-              <p className="text-ink-light text-xs font-mono mb-3">
+              <p className="text-ink-light text-sm mb-4">
                 add this code to your page, then click verify:
               </p>
-              <div className="ink-block mb-3 text-center font-mono text-sm select-all">
-                <span className="text-onda">{verificationCode}</span>
+              <div className="ink-block p-4 mb-4 text-center font-mono text-onda">
+                {verificationCode}
               </div>
-              <p className="text-ink-faint text-2xs font-mono mb-4">
+              <p className="text-ink-faint text-xs mb-6">
                 your page:{" "}
                 <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-onda hover:underline">
                   {verifyUrl}
                 </a>
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button onClick={() => setStep("search")} className="btn-secondary">back</button>
                 <button onClick={() => handleVerify(false)} disabled={verifying} className="btn-primary flex-1">
                   {verifying ? "checking..." : "verify"}
                 </button>
               </div>
-              <div className="receipt-divider" />
               <button
                 onClick={() => handleVerify(true)}
                 disabled={verifying}
-                className="text-2xs text-ink-faint hover:text-ink w-full text-center font-mono"
+                className="text-xs text-ink-faint hover:text-ink w-full text-center mt-4 py-2"
               >
                 skip verification (demo mode)
               </button>
             </>
           ) : (
             <>
-              <p className="text-ink-light text-xs font-mono mb-4">
+              <p className="text-ink-light text-sm mb-6">
                 no website found on MusicBrainz. use demo mode to proceed.
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button onClick={() => setStep("search")} className="btn-secondary">back</button>
                 <button onClick={() => handleVerify(true)} disabled={verifying} className="btn-primary flex-1">
                   {verifying ? "verifying..." : "continue in demo mode"}
@@ -253,21 +228,23 @@ export default function ClaimPage() {
         </div>
       )}
 
-      {/* Step 3: Claim */}
+      {/* Claim */}
       {step === "claim" && selectedArtist && (
         <div>
-          <div className="font-mono text-xs space-y-1.5 mb-6">
-            <div className="flex justify-between">
-              <span className="text-ink-faint">artist</span>
-              <span className="font-bold text-sm">{selectedArtist.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-faint">name</span>
-              <span className="text-onda">{formatENSName(artistToSubname(selectedArtist.name))}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-faint">account</span>
-              <span className="text-2xs">{address}</span>
+          <div className="border border-rule p-6 mb-6">
+            <div className="grid sm:grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="text-xs text-ink-faint mb-0.5">artist</div>
+                <div className="font-bold text-lg">{selectedArtist.name}</div>
+              </div>
+              <div>
+                <div className="text-xs text-ink-faint mb-0.5">name</div>
+                <div className="text-onda font-mono">{formatENSName(artistToSubname(selectedArtist.name))}</div>
+              </div>
+              <div>
+                <div className="text-xs text-ink-faint mb-0.5">account</div>
+                <div className="font-mono text-xs truncate">{address}</div>
+              </div>
             </div>
           </div>
           {!claimConfirmed ? (
@@ -284,22 +261,22 @@ export default function ClaimPage() {
 
       {/* Releasing */}
       {step === "releasing" && (
-        <div className="py-8 font-mono text-xs text-ink-faint">
-          verifying...
-        </div>
+        <div className="py-12 text-ink-faint text-sm">verifying...</div>
       )}
 
       {/* Done */}
       {step === "done" && selectedArtist && (
         <div>
-          <div className="stamp text-onda border-onda mb-4">claimed</div>
-          <div className="text-headline font-bold mb-2">{selectedArtist.name}</div>
-          <p className="text-ink-light text-xs font-mono mb-1">
+          <div className="inline-block bg-onda text-paper px-3 py-1 text-xs font-bold uppercase tracking-wide mb-4">
+            claimed
+          </div>
+          <h2 className="text-3xl font-bold mb-2">{selectedArtist.name}</h2>
+          <p className="text-ink-light text-sm mb-1">
             registered as{" "}
-            <span className="text-onda">{formatENSName(artistToSubname(selectedArtist.name))}</span>
+            <span className="text-onda font-mono">{formatENSName(artistToSubname(selectedArtist.name))}</span>
           </p>
           {releaseResult?.unclaimedReleased && releaseResult.unclaimedReleased !== "0" && (
-            <p className="text-onda font-mono font-bold text-sm mb-1">
+            <p className="text-onda font-mono font-bold text-lg mb-2">
               ${formatUSDC(BigInt(releaseResult.unclaimedReleased))} released
             </p>
           )}
@@ -308,15 +285,15 @@ export default function ClaimPage() {
               href={`https://testnet.arcscan.app/tx/${releaseResult.txHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-onda text-2xs hover:underline font-mono block mb-4"
+              className="text-onda text-sm hover:underline block mb-6"
             >
               view on-chain
             </a>
           )}
-          <p className="text-ink-faint text-2xs font-mono mb-6">
+          <p className="text-ink-faint text-sm mb-6">
             future gifts from listeners go directly to your account.
           </p>
-          <a href={`/artist/${selectedArtist.id}`} className="btn-primary inline-block">
+          <a href={`/artist/${selectedArtist.id}`} className="btn-primary">
             view profile
           </a>
         </div>

@@ -43,21 +43,19 @@ export default function ArtistPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-        <div className="text-ink-faint text-xs font-mono">loading...</div>
+      <div className="max-w-4xl mx-auto px-5 sm:px-8 py-20">
+        <div className="text-ink-faint text-sm">loading...</div>
       </div>
     );
   }
 
   if (!artist) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-        <h1 className="text-headline font-bold mb-2">?</h1>
-        <p className="text-ink-light text-sm font-mono">can't find this artist yet. we're looking.</p>
-        <p className="font-mono text-2xs text-ink-faint mt-2">{mbid}</p>
-        {loadError && (
-          <p className="text-onda text-2xs mt-1 font-mono">{loadError}</p>
-        )}
+      <div className="max-w-4xl mx-auto px-5 sm:px-8 py-20">
+        <h1 className="text-2xl font-bold mb-2">can't find this artist yet</h1>
+        <p className="text-ink-light text-sm">we're looking.</p>
+        <p className="font-mono text-xs text-ink-faint mt-3">{mbid}</p>
+        {loadError && <p className="text-onda text-xs mt-1">{loadError}</p>}
       </div>
     );
   }
@@ -70,83 +68,75 @@ export default function ArtistPage() {
   const ensName = subname ? formatENSName(subname as string) : null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-      {/* Artist name — biggest thing on the page */}
-      <div className="mb-6">
-        <h1 className="text-display font-bold leading-none mb-1">{artist.name}</h1>
-        <div className="flex items-center gap-3 font-mono text-xs">
-          {ensName && ensName !== ".onda.eth" && (
-            <span className="text-onda">{ensName}</span>
-          )}
-          {artist.disambiguation && <span className="text-ink-faint">{artist.disambiguation}</span>}
-          {artist.country && <span className="text-ink-faint">{artist.country}</span>}
-          {isClaimed && verified ? (
-            <span className="stamp text-onda border-onda text-2xs">verified</span>
-          ) : isClaimed ? (
-            <span className="stamp text-ink-light border-ink-light text-2xs">claimed</span>
-          ) : (
-            <span className="stamp text-ink-faint border-ink-faint text-2xs">unclaimed</span>
-          )}
-        </div>
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">
+      {/* Artist name — biggest thing */}
+      <h1 className="text-5xl sm:text-6xl font-bold tracking-tight leading-none mb-3">
+        {artist.name}
+      </h1>
+      <div className="flex items-center gap-3 mb-10 flex-wrap">
+        {ensName && ensName !== ".onda.eth" && (
+          <span className="text-onda text-sm font-mono">{ensName}</span>
+        )}
+        {artist.disambiguation && <span className="text-ink-faint text-sm">{artist.disambiguation}</span>}
+        {artist.country && <span className="text-ink-faint text-sm">{artist.country}</span>}
+        {isClaimed && verified ? (
+          <span className="bg-onda text-paper px-2 py-0.5 text-xs font-bold uppercase tracking-wide">verified</span>
+        ) : isClaimed ? (
+          <span className="border border-ink px-2 py-0.5 text-xs uppercase tracking-wide">claimed</span>
+        ) : (
+          <span className="border border-rule text-ink-faint px-2 py-0.5 text-xs uppercase tracking-wide">unclaimed</span>
+        )}
       </div>
 
-      {/* Gifts number — prominent */}
-      <div className="mb-6">
-        <div className="section-label mb-1">gifts received</div>
-        <div className="big-number text-onda">
+      {/* Gifts number */}
+      <div className="mb-10">
+        <div className="text-xs uppercase tracking-widest text-ink-faint mb-2">gifts received</div>
+        <div className="font-mono text-4xl font-bold text-onda">
           ${unclaimed ? formatUSDC(unclaimed as bigint) : "0.00"}
         </div>
-        <div className="text-2xs text-ink-faint font-mono mt-0.5">
-          {isClaimed ? "claimed" : "waiting for artist"}
+        <div className="text-sm text-ink-light mt-1">
+          {isClaimed ? "claimed" : "waiting for artist to claim"}
         </div>
-      </div>
-
-      <div className="receipt-divider" />
-
-      {/* MBID */}
-      <div className="mb-6">
-        <div className="section-label mb-1">mbid</div>
-        <div className="font-mono text-2xs text-ink-faint break-all">{mbid}</div>
       </div>
 
       {/* Links */}
       {Object.keys(urls).length > 0 && (
-        <>
-          <div className="receipt-divider" />
-          <div className="mb-6">
-            <div className="section-label mb-2">links</div>
-            <div className="flex flex-wrap gap-1.5">
-              {Object.entries(urls).map(([platform, url]) => (
-                <a
-                  key={platform}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 border border-rule text-xs font-mono hover:border-ink hover:bg-ink hover:text-paper transition-all"
-                >
-                  {platform}
-                </a>
-              ))}
-            </div>
+        <div className="mb-10">
+          <div className="text-xs uppercase tracking-widest text-ink-faint mb-3">links</div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(urls).map(([platform, url]) => (
+              <a
+                key={platform}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border border-rule px-4 py-2 text-sm hover:bg-ink hover:text-paper hover:border-ink transition-all"
+              >
+                {platform}
+              </a>
+            ))}
           </div>
-        </>
+        </div>
       )}
+
+      {/* MBID */}
+      <div className="mb-10">
+        <div className="text-xs uppercase tracking-widest text-ink-faint mb-1">mbid</div>
+        <div className="font-mono text-xs text-ink-faint">{mbid}</div>
+      </div>
 
       {/* Claim CTA */}
       {!isClaimed && (
-        <>
-          <div className="receipt-divider" />
-          <div className="ink-block -mx-4 sm:-mx-6 px-4 sm:px-6 py-6">
-            <div className="font-bold text-lg mb-1">are you {artist.name}?</div>
-            <p className="text-paper/60 text-xs font-mono mb-3">
-              people have been giving to you. claim this profile to receive gifts directly.
-              {unclaimed ? ` $${formatUSDC(unclaimed as bigint)} waiting.` : ""}
-            </p>
-            <a href="/claim" className="font-mono text-xs border border-paper/30 px-5 py-2.5 hover:bg-paper hover:text-ink transition-all inline-block">
-              claim this profile
-            </a>
-          </div>
-        </>
+        <div className="ink-block -mx-5 sm:-mx-8 px-5 sm:px-8 py-10">
+          <h2 className="text-2xl font-bold mb-2">are you {artist.name}?</h2>
+          <p className="text-paper/60 text-sm mb-4">
+            people have been giving to you. claim this profile to receive gifts directly.
+            {unclaimed ? ` $${formatUSDC(unclaimed as bigint)} waiting.` : ""}
+          </p>
+          <a href="/claim" className="border border-paper/30 px-6 py-3 text-sm hover:bg-paper hover:text-ink transition-all inline-block">
+            claim this profile
+          </a>
+        </div>
       )}
     </div>
   );

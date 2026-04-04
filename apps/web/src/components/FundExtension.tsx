@@ -60,16 +60,20 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
 
   if (!detected) {
     return (
-      <div className="my-6 font-mono text-xs text-ink-faint">
-        extension not detected. install onda for Chrome and refresh.
+      <div className="mb-12 p-6 border border-rule">
+        <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-2">extension</h2>
+        <p className="text-sm text-ink-light">
+          extension not detected. install onda for Chrome and refresh.
+        </p>
       </div>
     );
   }
 
   if (!extWallet) {
     return (
-      <div className="my-6 font-mono text-xs text-ink-faint">
-        connecting to extension...
+      <div className="mb-12 p-6 border border-rule">
+        <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-2">extension</h2>
+        <p className="text-sm text-ink-light">connecting...</p>
       </div>
     );
   }
@@ -78,45 +82,46 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
   const hasUsdc = parseFloat(extWallet.usdcBalance || "0") > 0;
 
   return (
-    <div className="my-6">
-      <div className="section-label mb-3">extension account</div>
-      <div className="font-mono text-xs space-y-1 mb-3">
-        <div className="flex justify-between">
-          <span className="text-ink-faint">address</span>
-          <span
-            className="text-ink-light cursor-pointer hover:text-onda"
+    <div className="mb-12 p-6 border border-rule">
+      <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">extension account</h2>
+
+      <div className="grid sm:grid-cols-3 gap-4 mb-4">
+        <div>
+          <div className="text-xs text-ink-faint mb-0.5">address</div>
+          <div
+            className="font-mono text-sm text-ink-light cursor-pointer hover:text-onda truncate"
             onClick={() => navigator.clipboard.writeText(extWallet.address)}
           >
-            {extWallet.address.slice(0, 10)}...{extWallet.address.slice(-6)}
-          </span>
+            {extWallet.address}
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span className="text-ink-faint">balance</span>
-          <span>${extWallet.usdcBalance}</span>
+        <div>
+          <div className="text-xs text-ink-faint mb-0.5">balance</div>
+          <div className="font-mono text-sm">${extWallet.usdcBalance}</div>
         </div>
-        <div className="flex justify-between">
-          <span className="text-ink-faint">gift balance</span>
-          <span className={funded ? "text-onda font-bold" : "text-ink-light"}>
+        <div>
+          <div className="text-xs text-ink-faint mb-0.5">gift balance</div>
+          <div className={`font-mono text-sm font-bold ${funded ? "text-onda" : ""}`}>
             ${extWallet.escrowBalance}
-          </span>
+          </div>
         </div>
       </div>
 
       {funded ? (
-        <div className="stamp text-onda border-onda">
+        <div className="inline-block bg-onda text-paper px-3 py-1 text-xs font-bold uppercase tracking-wide">
           ready
         </div>
       ) : hasUsdc ? (
-        <p className="text-ink-light text-xs font-mono">
+        <p className="text-sm text-ink-light">
           funds received. click deposit in the extension popup.
         </p>
       ) : isConnected && !sent ? (
-        <div className="flex gap-1.5 items-center flex-wrap">
+        <div className="flex gap-2 items-center flex-wrap">
           {[1, 5, 10, 20].map((preset) => (
             <button
               key={preset}
               onClick={() => setAmount(String(preset))}
-              className={`px-3 py-1.5 text-xs font-mono font-medium border transition-all ${
+              className={`px-4 py-2 text-sm font-medium border transition-all ${
                 amount === String(preset)
                   ? "border-ink bg-ink text-paper"
                   : "border-rule text-ink-light hover:border-ink"
@@ -128,19 +133,17 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
           <button
             onClick={handleSend}
             disabled={isPending || isConfirming}
-            className="btn-primary text-xs px-4 py-1.5"
+            className="btn-primary"
           >
             {isConfirming ? "confirming..." : isPending ? "confirm in wallet..." : `send $${amount}`}
           </button>
         </div>
       ) : sent ? (
-        <div className="stamp text-onda border-onda">
+        <div className="inline-block bg-onda text-paper px-3 py-1 text-xs font-bold uppercase tracking-wide">
           funded
         </div>
       ) : (
-        <p className="text-xs text-ink-light font-mono">
-          sign in above, then add funds.
-        </p>
+        <p className="text-sm text-ink-light">sign in above, then add funds.</p>
       )}
     </div>
   );

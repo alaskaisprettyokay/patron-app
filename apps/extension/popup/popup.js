@@ -109,8 +109,6 @@ function update() {
     const state = scrobble?.status || "idle";
 
     document.getElementById("total-given").textContent = `$${totalGiven}`;
-    document.getElementById("total-given-detail").textContent = `$${totalGiven}`;
-    document.getElementById("gift-count").textContent = `${giftCount}`;
 
     if (scrobble?.artist) {
       document.getElementById("artist-name").textContent = scrobble.artist;

@@ -50,81 +50,75 @@ export default function DashboardPage() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
-        <div className="max-w-md">
-          <div className="text-display font-bold mb-4">--</div>
-          <p className="text-ink-light text-sm font-mono">
-            sign in to start supporting artists.
-          </p>
-        </div>
+      <div className="max-w-4xl mx-auto px-5 sm:px-8 py-20">
+        <h1 className="text-4xl font-bold mb-3">dashboard</h1>
+        <p className="text-ink-light text-sm">
+          sign in to start supporting artists.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-      {/* Hero number — total given is the star */}
-      <div className="mb-8">
-        <div className="section-label mb-1">total given</div>
-        <div className="text-display font-bold text-onda">
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">
+      {/* Hero — your total */}
+      <div className="mb-12">
+        <div className="text-xs uppercase tracking-widest text-ink-faint mb-2">total given</div>
+        <div className="font-mono text-6xl sm:text-7xl font-bold tracking-tight text-onda leading-none">
           ${totalGiven ? formatUSDC(totalGiven) : "0.00"}
         </div>
       </div>
 
-      {/* Stats row — secondary numbers */}
-      <div className="flex gap-8 mb-8 font-mono">
-        <div>
-          <div className="big-number">${balance ? formatUSDC(balance) : "0.00"}</div>
-          <div className="section-label mt-0.5">balance</div>
+      {/* Stats */}
+      <div className="grid sm:grid-cols-3 gap-6 mb-12">
+        <div className="border-l-2 border-ink pl-4">
+          <div className="font-mono text-2xl font-bold">${balance ? formatUSDC(balance) : "0.00"}</div>
+          <div className="text-sm text-ink-light">balance remaining</div>
         </div>
-        <div>
-          <div className="big-number">{uniqueArtists}</div>
-          <div className="section-label mt-0.5">artists</div>
+        <div className="border-l-2 border-ink pl-4">
+          <div className="font-mono text-2xl font-bold">{uniqueArtists}</div>
+          <div className="text-sm text-ink-light">artists supported</div>
         </div>
-        <div className="ml-auto">
+        <div className="border-l-2 border-ink pl-4">
           <WorldIDVerify onVerified={() => setIsHumanVerified(true)} />
         </div>
       </div>
 
-      <div className="receipt-divider" />
-
       {/* Extension wallet */}
       <FundExtension onWalletDetected={onExtWalletDetected} />
 
-      <div className="receipt-divider" />
-
-      {/* Setup — monospace checklist */}
-      <div className="mb-6">
-        <div className="section-label mb-3">setup</div>
-        <div className="font-mono text-xs space-y-1">
-          <CheckItem done={isConnected} label="sign in" />
-          <CheckItem done={isHumanVerified} label="verify you're human" />
-          <CheckItem done={!!extWalletAddr} label="extension detected" />
-          <CheckItem done={balance > 0n} label="add funds" />
-          <CheckItem done={totalGiven > 0n} label="play a track" />
+      {/* Setup */}
+      <div className="mb-12">
+        <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">setup</h2>
+        <div className="space-y-2">
+          <Check done={isConnected} label="sign in" />
+          <Check done={isHumanVerified} label="verify you're human" />
+          <Check done={!!extWalletAddr} label="extension detected" />
+          <Check done={balance > 0n} label="add funds" />
+          <Check done={totalGiven > 0n} label="play a track" />
         </div>
       </div>
 
-      <div className="receipt-divider" />
-
-      {/* Recent gifts — the receipt */}
+      {/* Recent */}
       <div>
-        <div className="section-label mb-3">recent</div>
+        <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">recent</h2>
         <GiftFeed />
       </div>
     </div>
   );
 }
 
-function CheckItem({ done, label }: { done: boolean; label: string }) {
+function Check({ done, label }: { done: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className={done ? "text-onda" : "text-rule-dark"}>
-        {done ? "[x]" : "[ ]"}
-      </span>
-      <span className={done ? "text-ink-faint line-through" : "text-ink"}>
-        {label}
-      </span>
+    <div className="flex items-center gap-3 text-sm">
+      <div className={`w-5 h-5 border-2 flex items-center justify-center ${done ? "border-onda bg-onda" : "border-rule"}`}>
+        {done && (
+          <svg className="w-3 h-3 text-paper" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="square" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </div>
+      <span className={done ? "text-ink-faint line-through" : ""}>{label}</span>
     </div>
   );
 }
