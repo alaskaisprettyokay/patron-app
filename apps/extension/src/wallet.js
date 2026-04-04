@@ -1,7 +1,13 @@
-// Embedded wallet for silent auto-tipping
-// Generates a session key, signs transactions, broadcasts to Arc testnet
+// Extension wallet — session key management and tip signing.
+// The session key is only used for signing; it never holds funds.
+// The user's real wallet calls PatronEscrow.join(sessionAddress) to link their account.
 
-import { createWalletClient, createPublicClient, http, parseUnits, formatUnits } from "viem";
+import {
+  createPublicClient,
+  http,
+  keccak256,
+  encodePacked,
+} from "viem";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 
 const ARC_TESTNET = {
@@ -12,234 +18,192 @@ const ARC_TESTNET = {
   blockExplorers: { default: { name: "ArcScan", url: "https://testnet.arcscan.app" } },
 };
 
-const ESCROW_ADDRESS = "0x0d790A857fcc8d2638426cA689Fd41Ee616Cf85E";
-const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
+const ESCROW_ADDRESS = process.env.PATRON_ESCROW_ADDRESS;
 
 const ESCROW_ABI = [
   {
-    name: "tipDefault",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "mbidHash", type: "bytes32" }],
-    outputs: [],
-  },
-  {
-    name: "deposit",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "amount", type: "uint256" }],
-    outputs: [],
-  },
-  {
-    name: "listenerBalance",
+    name: "tipNonce",
     type: "function",
     stateMutability: "view",
-    inputs: [{ name: "", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    name: "defaultTipAmount",
-    type: "function",
-    stateMutability: "view",
-    inputs: [],
+    inputs: [{ name: "smartAccount", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
   },
 ];
 
-const ERC20_ABI = [
+const JOINED_ABI = [
   {
-    name: "approve",
-    type: "function",
-    stateMutability: "nonpayable",
+    name: "Joined",
+    type: "event",
     inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
+      { name: "user", type: "address", indexed: true },
+      { name: "smartAccount", type: "address", indexed: true },
+      { name: "sessionKey", type: "address", indexed: true },
     ],
-    outputs: [{ name: "", type: "bool" }],
   },
+];
+
+const SMART_ACCOUNT_ABI = [
   {
-    name: "balanceOf",
+    name: "sessionKey",
     type: "function",
     stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    name: "allowance",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
   },
 ];
 
 function getPublicClient() {
-  return createPublicClient({
-    chain: ARC_TESTNET,
-    transport: http(),
-  });
+  return createPublicClient({ chain: ARC_TESTNET, transport: http() });
 }
 
-function getWalletClient(privateKey) {
-  const account = privateKeyToAccount(privateKey);
-  return createWalletClient({
-    account,
-    chain: ARC_TESTNET,
-    transport: http(),
-  });
-}
+// --- Session key lifecycle ---
 
-// --- Exported API (called from service worker via message passing) ---
-
-export async function initWallet() {
-  const data = await chrome.storage.local.get(["walletKey", "walletAddress"]);
-  if (data.walletKey && data.walletAddress) {
-    return { address: data.walletAddress, isNew: false };
+/// Generates a session key on first install and persists it.
+/// The session key address is what the user encodes in the QR code transaction.
+export async function initSession() {
+  const data = await chrome.storage.local.get(["sessionKey", "sessionAddress"]);
+  if (data.sessionKey && data.sessionAddress) {
+    return { sessionAddress: data.sessionAddress, isNew: false };
   }
 
-  const privateKey = generatePrivateKey();
-  const account = privateKeyToAccount(privateKey);
+  const sessionKey = generatePrivateKey();
+  const account = privateKeyToAccount(sessionKey);
 
   await chrome.storage.local.set({
-    walletKey: privateKey,
-    walletAddress: account.address,
+    sessionKey,
+    sessionAddress: account.address,
   });
 
-  return { address: account.address, isNew: true };
+  return { sessionAddress: account.address, isNew: true };
 }
 
-export async function getWalletInfo() {
-  const data = await chrome.storage.local.get(["walletKey", "walletAddress"]);
-  if (!data.walletKey) return null;
+/// Returns current account linkage state from storage.
+export async function getAccountStatus() {
+  const data = await chrome.storage.local.get([
+    "sessionKey",
+    "sessionAddress",
+    "ownerAddress",
+    "smartAccountAddress",
+  ]);
+  return {
+    sessionAddress: data.sessionAddress || null,
+    ownerAddress: data.ownerAddress || null,
+    smartAccountAddress: data.smartAccountAddress || null,
+    isLinked: !!(data.ownerAddress && data.smartAccountAddress),
+  };
+}
 
-  const publicClient = getPublicClient();
-  const address = data.walletAddress;
+/// Returns a URL to the web app's /connect page with the session key as a query param.
+/// Render this as a QR code — scanning opens the browser, not a wallet app.
+/// Works for both first-time join and session rotation (reinstall).
+export async function getJoinUri() {
+  const { sessionAddress } = await chrome.storage.local.get(["sessionAddress"]);
+  if (!sessionAddress) throw new Error("No session key initialised");
+  return `${process.env.PATRON_WEB_URL}/connect?session=${sessionAddress}`;
+}
+
+/// Checks whether our session key is active on-chain.
+/// Reads sessionKey() directly from the smart account — no getLogs needed.
+/// Returns null if not yet linked or if the session key has been rotated.
+export async function checkForJoin() {
+  const data = await chrome.storage.local.get([
+    "sessionAddress",
+    "ownerAddress",
+    "smartAccountAddress",
+  ]);
+  const { sessionAddress, ownerAddress, smartAccountAddress } = data;
+  if (!sessionAddress || !smartAccountAddress) return null;
 
   try {
-    const [usdcBalance, escrowBalance, allowance] = await Promise.all([
-      publicClient.readContract({
-        address: USDC_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [address],
-      }),
-      publicClient.readContract({
-        address: ESCROW_ADDRESS,
-        abi: ESCROW_ABI,
-        functionName: "listenerBalance",
-        args: [address],
-      }),
-      publicClient.readContract({
-        address: USDC_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        args: [address, ESCROW_ADDRESS],
-      }),
-    ]);
-
-    return {
-      address,
-      usdcBalance: formatUnits(usdcBalance, 6),
-      escrowBalance: formatUnits(escrowBalance, 6),
-      hasAllowance: allowance > 0n,
-      rawUsdcBalance: usdcBalance.toString(),
-      rawEscrowBalance: escrowBalance.toString(),
-    };
-  } catch (err) {
-    return { address, error: err.message };
-  }
-}
-
-export async function approveAndDeposit() {
-  const data = await chrome.storage.local.get(["walletKey", "walletAddress"]);
-  if (!data.walletKey) throw new Error("No wallet");
-
-  const publicClient = getPublicClient();
-  const walletClient = getWalletClient(data.walletKey);
-
-  // Check USDC balance
-  console.log("[onda] approveAndDeposit: checking balance...");
-  const usdcBalance = await publicClient.readContract({
-    address: USDC_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [data.walletAddress],
-  });
-  console.log("[onda] USDC balance:", usdcBalance.toString());
-
-  if (usdcBalance === 0n) throw new Error("No USDC balance to deposit");
-
-  // Reserve USDC for gas (Arc uses USDC as native gas token, shared pool)
-  // Reserve $0.10 for ~100 future tip transactions
-  const GAS_RESERVE = 100000n; // $0.10 in 6 decimals
-  const depositAmount = usdcBalance > GAS_RESERVE ? usdcBalance - GAS_RESERVE : 0n;
-  if (depositAmount === 0n) throw new Error("Balance too low (need >$0.10 for gas reserve)");
-  console.log("[onda] Depositing:", depositAmount.toString(), "(reserving gas)");
-
-  // Check allowance
-  const allowance = await publicClient.readContract({
-    address: USDC_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "allowance",
-    args: [data.walletAddress, ESCROW_ADDRESS],
-  });
-  console.log("[onda] Current allowance:", allowance.toString());
-
-  // Approve if needed
-  if (allowance < depositAmount) {
-    console.log("[onda] Sending approve tx...");
-    try {
-      const approveTx = await walletClient.writeContract({
-        address: USDC_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: "approve",
-        args: [ESCROW_ADDRESS, depositAmount],
-      });
-      console.log("[onda] Approve tx sent:", approveTx);
-      await publicClient.waitForTransactionReceipt({ hash: approveTx });
-      console.log("[onda] Approve confirmed");
-    } catch (err) {
-      console.error("[onda] Approve failed:", err);
-      throw new Error(`Approve failed: ${err.shortMessage || err.message}`);
+    const publicClient = getPublicClient();
+    const onChainSession = await publicClient.readContract({
+      address: smartAccountAddress,
+      abi: SMART_ACCOUNT_ABI,
+      functionName: "sessionKey",
+    });
+    if (onChainSession.toLowerCase() === sessionAddress.toLowerCase()) {
+      return { ownerAddress, smartAccountAddress };
     }
+    // Session key was rotated out — clear stale state so QR re-renders
+    await chrome.storage.local.set({ ownerAddress: null, smartAccountAddress: null });
+    return null;
+  } catch (err) {
+    console.error("[Patron] checkForJoin failed:", err);
+    return null;
   }
+}
 
-  // Deposit all USDC into escrow
-  console.log("[onda] Sending deposit tx...");
-  try {
-    const depositTx = await walletClient.writeContract({
+/// Subscribes to on-chain Joined events for our session key.
+/// Calls onLinked({ ownerAddress, smartAccountAddress }) on detection.
+/// Returns an unwatch function — call it when the popup closes.
+export async function watchForJoin(onLinked) {
+  const { sessionAddress } = await chrome.storage.local.get(["sessionAddress"]);
+  if (!sessionAddress) return () => {};
+
+  const publicClient = getPublicClient();
+
+  const unwatch = publicClient.watchContractEvent({
+    address: ESCROW_ADDRESS,
+    abi: JOINED_ABI,
+    eventName: "Joined",
+    args: { sessionKey: sessionAddress },
+    onLogs: async (logs) => {
+      if (logs.length === 0) return;
+      const { user: ownerAddress, smartAccount: smartAccountAddress } = logs[0].args;
+      await chrome.storage.local.set({ ownerAddress, smartAccountAddress });
+      onLinked({ ownerAddress, smartAccountAddress });
+      unwatch();
+    },
+  });
+
+  return unwatch;
+}
+
+// --- Tip signing ---
+
+/// Signs a tip authorisation with the session key.
+/// The signature proves the session key (linked to the user's smart account via PatronHub)
+/// authorises a tip of `amount` to artist `mbidHash`.
+/// The web app relays the signed tip on-chain and verifies with ecrecover.
+export async function signTip(mbidHash, amount) {
+  const data = await chrome.storage.local.get([
+    "sessionKey",
+    "sessionAddress",
+    "smartAccountAddress",
+  ]);
+  if (!data.sessionKey) throw new Error("No session key");
+  if (!data.smartAccountAddress) throw new Error("Account not linked — scan QR first");
+
+  // Always fetch nonce from chain — avoids desync on reinstall
+  const publicClient = getPublicClient();
+  const nonce = Number(
+    await publicClient.readContract({
       address: ESCROW_ADDRESS,
       abi: ESCROW_ABI,
-      functionName: "deposit",
-      args: [depositAmount],
-    });
-    console.log("[onda] Deposit tx sent:", depositTx);
-    await publicClient.waitForTransactionReceipt({ hash: depositTx });
-    console.log("[onda] Deposit confirmed");
-    return { txHash: depositTx, amount: formatUnits(depositAmount, 6) };
-  } catch (err) {
-    console.error("[onda] Deposit failed:", err);
-    throw new Error(`Deposit failed: ${err.shortMessage || err.message}`);
-  }
-}
+      functionName: "tipNonce",
+      args: [data.smartAccountAddress],
+    })
+  );
 
-export async function sendTip(mbidHash) {
-  const data = await chrome.storage.local.get(["walletKey"]);
-  if (!data.walletKey) throw new Error("No wallet");
+  const account = privateKeyToAccount(data.sessionKey);
 
-  const publicClient = getPublicClient();
-  const walletClient = getWalletClient(data.walletKey);
+  // Hash: keccak256(smartAccount || mbidHash || amount || nonce)
+  const hash = keccak256(
+    encodePacked(
+      ["address", "bytes32", "uint256", "uint256"],
+      [data.smartAccountAddress, mbidHash, BigInt(amount), BigInt(nonce)]
+    )
+  );
 
-  const txHash = await walletClient.writeContract({
-    address: ESCROW_ADDRESS,
-    abi: ESCROW_ABI,
-    functionName: "tipDefault",
-    args: [mbidHash],
-  });
+  // Personal sign (EIP-191) so Solidity can recover with ECDSA.recover(hash, sig)
+  const signature = await account.signMessage({ message: { raw: hash } });
 
-  await publicClient.waitForTransactionReceipt({ hash: txHash });
-  return { txHash };
+  return {
+    smartAccount: data.smartAccountAddress,
+    sessionAddress: data.sessionAddress,
+    mbidHash,
+    amount,
+    nonce,
+    signature,
+  };
 }

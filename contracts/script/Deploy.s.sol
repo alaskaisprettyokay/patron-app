@@ -3,12 +3,11 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "../src/PatronEscrow.sol";
-import "../src/PatronRegistry.sol";
 import "../src/MockUSDC.sol";
 
 contract Deploy is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -21,10 +20,6 @@ contract Deploy is Script {
         PatronEscrow escrow = new PatronEscrow(address(usdc));
         console.log("PatronEscrow deployed at:", address(escrow));
 
-        // Deploy PatronRegistry
-        PatronRegistry registry = new PatronRegistry();
-        console.log("PatronRegistry deployed at:", address(registry));
-
         // Mint initial USDC to deployer for testing
         usdc.mint(deployer, 10000e6); // 10,000 USDC
         console.log("Minted 10,000 USDC to deployer");
@@ -36,6 +31,5 @@ contract Deploy is Script {
         console.log("Set these in .env.local:");
         console.log("NEXT_PUBLIC_USDC_ADDRESS=", address(usdc));
         console.log("NEXT_PUBLIC_PATRON_ESCROW_ADDRESS=", address(escrow));
-        console.log("NEXT_PUBLIC_PATRON_REGISTRY_ADDRESS=", address(registry));
     }
 }

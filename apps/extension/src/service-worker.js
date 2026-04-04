@@ -1,9 +1,9 @@
-// onda service worker — handles scrobble + gift flow
+// onda service worker — handles scrobble + gift signing flow
 
-importScripts("wallet.bundle.js");
+import { initSession, getAccountStatus, getJoinUri, checkForJoin, watchForJoin, signTip } from "./wallet.js";
 
-const API_BASE = "http://localhost:3000";
-const GIFT_AMOUNT = 0.01;
+const API_BASE = process.env.PATRON_WEB_URL || "http://localhost:3000";
+const GIFT_AMOUNT = 10000; // 0.01 USDC in 6 decimals // 0.01 USDC in 6 decimals
 
 // Current scrobble state
 let scrobbleState = {
@@ -15,13 +15,34 @@ let scrobbleState = {
   threshold: 10000,
 };
 
-// Initialize wallet on startup
-OndaWallet.initWallet().then((info) => {
-  console.log(`[onda] Wallet ready: ${info.address}${info.isNew ? " (new)" : ""}`);
+// Initialise session key on startup
+initSession().then(({ sessionAddress, isNew }) => {
+  console.log(`[onda] Session key ready: ${sessionAddress}${isNew ? " (new)" : ""}`);
 });
 
-// Listen for messages from content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+// Keep the service worker alive while the popup holds a port open.
+// While connected, watch for a Joined event and notify the popup when found.
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "popup") return;
+
+  let unwatch = null;
+
+  getAccountStatus().then(async (status) => {
+    if (status.isLinked) return; // already linked, no need to watch
+
+    // Start watching for a new Joined event
+    unwatch = await watchForJoin(({ ownerAddress, smartAccountAddress }) => {
+      port.postMessage({ type: "LINKED", ownerAddress, smartAccountAddress });
+    });
+  });
+
+  port.onDisconnect.addListener(() => {
+    if (unwatch) unwatch();
+  });
+});
+
+// Listen for messages from content scripts and popup
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const { type, data } = message;
 
   switch (type) {
@@ -75,17 +96,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       getFullStatus().then(sendResponse);
       return true;
 
-    case "GET_WALLET_INFO":
-      OndaWallet.getWalletInfo().then(sendResponse);
+    case "GET_ACCOUNT_STATUS":
+      // Also does a quick on-chain check if not yet linked
+      getAccountStatus().then(async (status) => {
+        if (!status.isLinked && status.sessionAddress) {
+          const found = await checkForJoin();
+          if (found) {
+            sendResponse({ ...status, ...found, isLinked: true });
+            return;
+          }
+        }
+        sendResponse(status);
+      });
       return true;
 
-    case "INIT_WALLET":
-      OndaWallet.initWallet().then(sendResponse);
-      return true;
-
-    case "APPROVE_AND_DEPOSIT":
-      OndaWallet.approveAndDeposit()
-        .then((result) => sendResponse({ success: true, ...result }))
+    case "GET_JOIN_URI":
+      getJoinUri()
+        .then(sendResponse)
         .catch((err) => sendResponse({ error: err.message }));
       return true;
   }
@@ -121,26 +148,31 @@ async function handleScrobbleComplete({ artist, track, platform }) {
       return;
     }
 
-    const data = await res.json();
+    const lookupData = await res.json();
 
-    if (data.artist?.mbidHash) {
-      // Send gift on-chain
+    if (lookupData.artist?.mbidHash) {
       try {
-        const giftResult = await OndaWallet.sendTip(data.artist.mbidHash);
-        console.log(`[onda] On-chain gift tx: ${giftResult.txHash}`);
-        scrobbleState = { ...scrobbleState, status: "gifted", txHash: giftResult.txHash };
+        // Sign the gift with session key — web app relays on-chain
+        const giftPayload = await signTip(lookupData.artist.mbidHash, GIFT_AMOUNT);
 
-        // Notify dashboard so gift appears in feed
-        fetch(`${API_BASE}/api/gift`, {
+        const giftRes = await fetch(`${API_BASE}/api/relay`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            artist: data.artist.name || artist,
-            track: data.track?.title || track,
+            artist: lookupData.artist.name || artist,
+            track: lookupData.track?.title || track,
             platform,
-            txHash: giftResult.txHash,
+            ...giftPayload,
           }),
-        }).catch(() => {}); // best-effort, don't block
+        });
+
+        const giftResult = await giftRes.json();
+        console.log(`[onda] Gift submitted:`, giftResult);
+        scrobbleState = {
+          ...scrobbleState,
+          status: "gifted",
+          txHash: giftResult.txHash || null,
+        };
       } catch (err) {
         console.warn(`[onda] Gift failed: ${err.message}`);
         scrobbleState = { ...scrobbleState, status: "gift_failed", giftError: err.message };
@@ -150,13 +182,12 @@ async function handleScrobbleComplete({ artist, track, platform }) {
 
     // Store in history
     const { giftHistory = [] } = await chrome.storage.local.get(["giftHistory"]);
-
     giftHistory.unshift({
-      artist: data.artist?.name || artist,
-      track: data.track?.title || track,
-      mbid: data.artist?.mbid,
-      mbidHash: data.artist?.mbidHash,
-      amount: GIFT_AMOUNT,
+      artist: lookupData.artist?.name || artist,
+      track: lookupData.track?.title || track,
+      mbid: lookupData.artist?.mbid,
+      mbidHash: lookupData.artist?.mbidHash,
+      amount: GIFT_AMOUNT / 1e6,
       platform,
       timestamp: Date.now(),
       txHash: scrobbleState.txHash || null,
@@ -164,8 +195,6 @@ async function handleScrobbleComplete({ artist, track, platform }) {
 
     if (giftHistory.length > 100) giftHistory.length = 100;
     await chrome.storage.local.set({ giftHistory });
-
-    console.log(`[onda] Sent $${GIFT_AMOUNT} to ${data.artist?.name || artist}`);
   } catch (error) {
     console.error("[onda] Error:", error);
     scrobbleState = { ...scrobbleState, status: "error" };
@@ -185,7 +214,7 @@ async function getFullStatus() {
   return {
     scrobble: data.scrobbleState || scrobbleState,
     giftCount: gifts.length,
-    totalGiven: (gifts.length * GIFT_AMOUNT).toFixed(2),
+    totalGiven: gifts.reduce((sum, g) => sum + (g.amount || 0), 0).toFixed(2),
     uniqueArtists,
     recentGifts: gifts.slice(0, 10),
   };

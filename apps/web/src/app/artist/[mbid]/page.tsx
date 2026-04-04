@@ -5,7 +5,6 @@ import { useEffect, useState, useMemo } from "react";
 import { useReadContract } from "wagmi";
 import { getArtistDetails, getArtistUrls, type MBArtistDetails } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
-import { REGISTRY_ADDRESS, ONDA_REGISTRY_ABI } from "@/lib/contracts";
 import { formatENSName } from "@/lib/ens";
 import { fetchArtistGifts, type OnChainGift } from "@/lib/gifts";
 
@@ -79,8 +78,8 @@ export default function ArtistPage() {
   });
 
   const { data: subname } = useReadContract({
-    address: REGISTRY_ADDRESS,
-    abi: ONDA_REGISTRY_ABI,
+    address: ESCROW_ADDRESS,
+    abi: ONDA_ESCROW_ABI,
     functionName: "artistSubname",
     args: [mbidHash],
   });

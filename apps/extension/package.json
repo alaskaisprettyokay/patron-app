@@ -5,10 +5,13 @@
   "description": "onda — detect what you're listening to, send gifts directly to artists",
   "scripts": {
     "build": "node build.js",
-    "dev": "node build.js --watch"
+    "dev": "node build.js --watch",
+    "clean": "rm -rf background/service-worker.js popup/popup.js"
   },
   "dependencies": {
+    "dotenv": "^17.4.0",
     "esbuild": "^0.28.0",
+    "qrcode": "^1.5.4",
     "viem": "^2.47.6"
   }
 }

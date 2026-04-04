@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWalletClient, http, createPublicClient } from "viem";
+import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { ONDA_ESCROW_ABI } from "@/lib/contracts";
+import { PATRON_ESCROW_ABI } from "@/lib/contracts";
 
 const ARC_RPC = "https://rpc.testnet.arc.network";
 const ESCROW_ADDRESS = process.env.NEXT_PUBLIC_PATRON_ESCROW_ADDRESS as `0x${string}`;
@@ -13,18 +13,28 @@ const arcTestnet = {
   rpcUrls: { default: { http: [ARC_RPC] } },
 } as const;
 
-export async function POST(request: NextRequest) {
-  try {
-    const { action, mbidHash, senderKey } = await request.json();
+// Server-side relayer account — needs USDC for gas on Arc Testnet
+const RELAY_KEY = process.env.RELAY_PRIVATE_KEY as `0x${string}` | undefined;
 
-    if (!senderKey || !mbidHash) {
-      return NextResponse.json({ error: "senderKey and mbidHash required" }, { status: 400 });
+export async function POST(request: NextRequest) {
+  if (!RELAY_KEY) {
+    return NextResponse.json({ error: "Relayer not configured" }, { status: 503 });
+  }
+
+  try {
+    const { smartAccount, mbidHash, amount, nonce, signature } = await request.json();
+
+    if (!smartAccount || !mbidHash || amount == null || nonce == null || !signature) {
+      return NextResponse.json(
+        { error: "smartAccount, mbidHash, amount, nonce, and signature are required" },
+        { status: 400 }
+      );
     }
 
-    const account = privateKeyToAccount(senderKey as `0x${string}`);
+    const relayer = privateKeyToAccount(RELAY_KEY);
 
     const walletClient = createWalletClient({
-      account,
+      account: relayer,
       chain: arcTestnet,
       transport: http(ARC_RPC),
     });
@@ -34,66 +44,25 @@ export async function POST(request: NextRequest) {
       transport: http(ARC_RPC),
     });
 
-    if (action === "tipDefault") {
-      const hash = await walletClient.writeContract({
-        address: ESCROW_ADDRESS,
-        abi: ONDA_ESCROW_ABI,
-        functionName: "tipDefault",
-        args: [mbidHash as `0x${string}`],
-      });
+    const hash = await walletClient.writeContract({
+      address: ESCROW_ADDRESS,
+      abi: PATRON_ESCROW_ABI,
+      functionName: "tipWithSignature",
+      args: [
+        smartAccount as `0x${string}`,
+        mbidHash as `0x${string}`,
+        BigInt(amount),
+        BigInt(nonce),
+        signature as `0x${string}`,
+      ],
+    });
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-      return NextResponse.json({
-        success: true,
-        txHash: hash,
-        status: receipt.status,
-      });
-    }
-
-    if (action === "approve") {
-      const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}`;
-      const hash = await walletClient.writeContract({
-        address: USDC_ADDRESS,
-        abi: [
-          {
-            name: "approve",
-            type: "function",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "spender", type: "address" },
-              { name: "amount", type: "uint256" },
-            ],
-            outputs: [{ name: "", type: "bool" }],
-          },
-        ] as const,
-        functionName: "approve",
-        args: [ESCROW_ADDRESS, BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")],
-      });
-
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      return NextResponse.json({ success: true, txHash: hash, status: receipt.status });
-    }
-
-    if (action === "deposit") {
-      const { amount } = await request.json();
-      const hash = await walletClient.writeContract({
-        address: ESCROW_ADDRESS,
-        abi: ONDA_ESCROW_ABI,
-        functionName: "deposit",
-        args: [BigInt(amount)],
-      });
-
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      return NextResponse.json({ success: true, txHash: hash, status: receipt.status });
-    }
-
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, txHash: hash, status: receipt.status });
+  } catch (error: unknown) {
     console.error("Relay error:", error);
-    return NextResponse.json(
-      { error: error?.message || "Transaction failed" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Transaction failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
