@@ -2,21 +2,19 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { useReadContract } from "wagmi";
+import { useReadContract, usePublicClient } from "wagmi";
 import { getArtistDetails, getArtistUrls, type MBArtistDetails } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
 import { REGISTRY_ADDRESS, ONDA_REGISTRY_ABI } from "@/lib/contracts";
 import { formatENSName } from "@/lib/ens";
+import { parseAbiItem, formatUnits } from "viem";
 
-interface GiftRecord {
-  artist: string;
-  track: string;
-  mbid: string | null;
-  amount: number;
-  platform: string;
-  listenerAddress: string | null;
-  timestamp: number;
-  txHash: string | null;
+interface OnChainGift {
+  listener: string;
+  amount: bigint;
+  blockNumber: bigint;
+  txHash: string;
+  timestamp?: number;
 }
 
 function timeAgo(ts: number): string {
@@ -38,11 +36,13 @@ export default function ArtistPage() {
   const params = useParams();
   const mbid = params.mbid as string;
   const mbidHash = mbidToBytes32(mbid);
+  const publicClient = usePublicClient();
 
   const [artist, setArtist] = useState<MBArtistDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [gifts, setGifts] = useState<GiftRecord[]>([]);
+  const [onChainGifts, setOnChainGifts] = useState<OnChainGift[]>([]);
+  const [giftsLoading, setGiftsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -55,25 +55,56 @@ export default function ArtistPage() {
       .finally(() => setLoading(false));
   }, [mbid]);
 
-  // Fetch gift history for this artist
+  // Fetch on-chain Tipped events for this artist
   useEffect(() => {
-    async function fetchGifts() {
+    if (!publicClient) return;
+
+    async function fetchGiftLogs() {
       try {
-        const res = await fetch("/api/gift");
-        if (!res.ok) return;
-        const data = await res.json();
-        const artistGifts = (data.gifts || []).filter(
-          (g: GiftRecord) => g.mbid === mbid
-        );
-        setGifts(artistGifts);
-      } catch {
-        // best-effort
+        const logs = await publicClient!.getLogs({
+          address: ESCROW_ADDRESS,
+          event: parseAbiItem(
+            "event Tipped(address indexed listener, bytes32 indexed mbidHash, uint256 amount)"
+          ),
+          args: { mbidHash: mbidHash as `0x${string}` },
+          fromBlock: 0n,
+          toBlock: "latest",
+        });
+
+        // Get block timestamps for recent logs (last 20)
+        const recentLogs = logs.slice(-20);
+        const gifts: OnChainGift[] = [];
+
+        for (const log of recentLogs) {
+          let timestamp: number | undefined;
+          try {
+            const block = await publicClient!.getBlock({
+              blockNumber: log.blockNumber!,
+            });
+            timestamp = Number(block.timestamp) * 1000;
+          } catch {
+            // skip timestamp if fetch fails
+          }
+
+          gifts.push({
+            listener: log.args.listener as string,
+            amount: log.args.amount as bigint,
+            blockNumber: log.blockNumber!,
+            txHash: log.transactionHash!,
+            timestamp,
+          });
+        }
+
+        setOnChainGifts(gifts.reverse()); // newest first
+      } catch (err) {
+        console.error("Failed to fetch gift logs:", err);
+      } finally {
+        setGiftsLoading(false);
       }
     }
-    fetchGifts();
-    const interval = setInterval(fetchGifts, 10000);
-    return () => clearInterval(interval);
-  }, [mbid]);
+
+    fetchGiftLogs();
+  }, [publicClient, mbidHash]);
 
   const { data: artistInfo } = useReadContract({
     address: ESCROW_ADDRESS,
@@ -95,22 +126,18 @@ export default function ArtistPage() {
     functionName: "defaultTipAmount",
   });
 
-  // Derived stats — use on-chain data as primary source
+  // Derived stats from on-chain data
   const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
-  const tipSize = (defaultTipAmount as bigint) || 10000n; // $0.01 in 6-decimal USDC
+  const tipSize = (defaultTipAmount as bigint) || 10000n;
   const onChainGiftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
 
   const uniqueSupporters = useMemo(() => {
-    const addrs = new Set(gifts.map((g) => g.listenerAddress).filter(Boolean));
+    const addrs = new Set(onChainGifts.map((g) => g.listener));
     return addrs.size;
-  }, [gifts]);
-
-  const uniqueTracks = useMemo(() => {
-    const tracks = new Set(gifts.map((g) => g.track));
-    return tracks.size;
-  }, [gifts]);
+  }, [onChainGifts]);
 
   const activityDays = useMemo(() => {
+    const giftsWithTime = onChainGifts.filter((g) => g.timestamp);
     const now = new Date();
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -118,7 +145,9 @@ export default function ArtistPage() {
       d.setDate(d.getDate() - i);
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
       const dayEnd = dayStart + 86400000;
-      const count = gifts.filter((g) => g.timestamp >= dayStart && g.timestamp < dayEnd).length;
+      const count = giftsWithTime.filter(
+        (g) => g.timestamp! >= dayStart && g.timestamp! < dayEnd
+      ).length;
       days.push({
         label: d.toLocaleDateString("en", { weekday: "short" }).toLowerCase(),
         count,
@@ -126,7 +155,7 @@ export default function ArtistPage() {
       });
     }
     return days;
-  }, [gifts]);
+  }, [onChainGifts]);
 
   const maxDayCount = Math.max(...activityDays.map((d) => d.count), 1);
 
@@ -163,7 +192,7 @@ export default function ArtistPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">
-      {/* Artist name — biggest thing */}
+      {/* Artist name */}
       <h1 className="text-5xl sm:text-6xl font-bold tracking-tight leading-none mb-3">
         {artist.name}
       </h1>
@@ -188,7 +217,7 @@ export default function ArtistPage() {
         </button>
       </div>
 
-      {/* Hero number — gifts received */}
+      {/* Hero number */}
       <div className="mb-12">
         <div className="text-xs uppercase tracking-widest text-ink-faint mb-2">gifts received</div>
         <div className="font-mono text-6xl sm:text-7xl font-bold tracking-tight text-onda leading-none">
@@ -206,17 +235,19 @@ export default function ArtistPage() {
           <div className="text-sm text-ink-light">total gifts</div>
         </div>
         <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">{uniqueSupporters || "—"}</div>
+          <div className="font-mono text-2xl font-bold">{uniqueSupporters}</div>
           <div className="text-sm text-ink-light">supporters</div>
         </div>
         <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">{uniqueTracks || "—"}</div>
-          <div className="text-sm text-ink-light">tracks played</div>
+          <div className="font-mono text-2xl font-bold">
+            ${onChainGiftCount > 0 ? (onChainGiftCount * 0.01).toFixed(2) : "0.00"}
+          </div>
+          <div className="text-sm text-ink-light">per gift avg</div>
         </div>
       </div>
 
       {/* Activity chart */}
-      {gifts.length > 0 && (
+      {onChainGifts.some((g) => g.timestamp) && (
         <div className="mb-12">
           <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">activity</h2>
           <div className="flex items-end gap-2 h-24">
@@ -251,6 +282,44 @@ export default function ArtistPage() {
         </div>
       )}
 
+      {/* Recent gifts from on-chain events */}
+      {onChainGifts.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">recent gifts</h2>
+          <div>
+            {onChainGifts.slice(0, 15).map((gift, i) => (
+              <div
+                key={`${gift.txHash}-${i}`}
+                className="flex items-baseline justify-between py-3 border-b border-rule last:border-0"
+              >
+                <div className="min-w-0 mr-4">
+                  <span className="font-mono text-sm text-ink-light">
+                    {truncateAddress(gift.listener)}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3 shrink-0 text-sm">
+                  <a
+                    href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-onda font-bold font-mono hover:underline"
+                  >
+                    ${formatUnits(gift.amount, 6)}
+                  </a>
+                  {gift.timestamp && (
+                    <span className="text-ink-faint text-xs">{timeAgo(gift.timestamp)}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {giftsLoading && onChainGifts.length === 0 && (
+        <div className="mb-12 text-ink-faint text-sm">loading gift history...</div>
+      )}
+
       {/* Wallet (claimed artists) */}
       {isClaimed && wallet && (
         <div className="mb-12">
@@ -280,45 +349,6 @@ export default function ArtistPage() {
               >
                 {platform}
               </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent gifts */}
-      {gifts.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">recent gifts</h2>
-          <div>
-            {gifts.slice(0, 15).map((gift, i) => (
-              <div
-                key={`${gift.timestamp}-${i}`}
-                className="flex items-baseline justify-between py-3 border-b border-rule last:border-0"
-              >
-                <div className="min-w-0 mr-4">
-                  <span className="font-bold text-sm">{gift.track}</span>
-                  {gift.listenerAddress && (
-                    <span className="text-ink-faint text-xs font-mono ml-2">
-                      {truncateAddress(gift.listenerAddress)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-baseline gap-3 shrink-0 text-sm">
-                  {gift.txHash ? (
-                    <a
-                      href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-onda font-bold font-mono hover:underline"
-                    >
-                      ${gift.amount?.toFixed(2) || "0.01"}
-                    </a>
-                  ) : (
-                    <span className="font-mono">${gift.amount?.toFixed(2) || "0.01"}</span>
-                  )}
-                  <span className="text-ink-faint text-xs">{timeAgo(gift.timestamp)}</span>
-                </div>
-              </div>
             ))}
           </div>
         </div>

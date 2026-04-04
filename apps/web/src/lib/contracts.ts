@@ -100,6 +100,31 @@ export const ONDA_ESCROW_ABI = [
     inputs: [{ name: "mbidHash", type: "bytes32" }],
     outputs: [],
   },
+  {
+    name: "Tipped",
+    type: "event",
+    inputs: [
+      { name: "listener", type: "address", indexed: true },
+      { name: "mbidHash", type: "bytes32", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "Deposited",
+    type: "event",
+    inputs: [
+      { name: "listener", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "ArtistClaimed",
+    type: "event",
+    inputs: [
+      { name: "mbidHash", type: "bytes32", indexed: true },
+      { name: "wallet", type: "address", indexed: true },
+    ],
+  },
 ] as const;
 
 export const ONDA_REGISTRY_ABI = [
