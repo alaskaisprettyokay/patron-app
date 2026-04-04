@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Providers } from "./providers";
-import ConnectButtonWrapper from "@/components/ConnectButtonWrapper";
+import dynamic from "next/dynamic";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
+
+const Providers = dynamic(() => import("./providers").then((m) => m.Providers), {
+  ssr: false,
+});
+
+const ConnectButtonWrapper = dynamic(
+  () => import("@/components/ConnectButtonWrapper"),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: "Patron — Direct Music Micropayments",
   description:
-    "Detect what you're listening to. Tip artists directly. Crypto-powered micropayments for music.",
+    "Detect what you're listening to. Pay artists directly. USDC micropayments for music.",
 };
 
 export default function RootLayout({
@@ -19,26 +27,24 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen">
         <Providers>
-          <nav className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center h-16">
-                <a href="/" className="flex items-center gap-2">
-                  <span className="text-2xl font-bold bg-gradient-to-r from-patron-400 to-accent bg-clip-text text-transparent">
-                    Patron
-                  </span>
+          <nav className="border-b border-rule">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6">
+              <div className="flex justify-between items-center h-14">
+                <a href="/" className="font-mono text-sm font-bold tracking-[0.2em] uppercase">
+                  Patron
                 </a>
                 <div className="flex items-center gap-6">
                   <a
                     href="/dashboard"
-                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                    className="text-ink-light hover:text-ink transition-colors text-sm"
                   >
                     Dashboard
                   </a>
                   <a
                     href="/claim"
-                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                    className="text-ink-light hover:text-ink transition-colors text-sm"
                   >
-                    Artists
+                    Claim
                   </a>
                   <ConnectButtonWrapper />
                 </div>

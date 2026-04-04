@@ -4,18 +4,33 @@
 
 @layer base {
   body {
-    @apply bg-gray-950 text-white antialiased;
+    @apply bg-paper text-ink antialiased;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-patron-600 hover:bg-patron-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors duration-200;
+    @apply bg-ink text-paper font-medium py-2 px-5 border border-ink transition-colors duration-150;
+  }
+  .btn-primary:hover {
+    @apply bg-transparent text-ink;
+  }
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-default;
   }
   .btn-secondary {
-    @apply bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 px-5 rounded-lg border border-gray-700 transition-colors duration-200;
+    @apply bg-transparent text-ink font-medium py-2 px-5 border border-rule-dark transition-colors duration-150;
+  }
+  .btn-secondary:hover {
+    @apply border-ink;
   }
   .card {
-    @apply bg-gray-900 border border-gray-800 rounded-xl p-6;
+    @apply border border-rule p-5;
+  }
+  .section-label {
+    @apply text-xs font-mono uppercase tracking-widest text-ink-faint;
+  }
+  .mono-value {
+    @apply font-mono tabular-nums;
   }
 }

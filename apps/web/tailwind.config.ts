@@ -5,28 +5,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        patron: {
-          50: "#f0f7ff",
-          100: "#e0effe",
-          200: "#bae0fd",
-          300: "#7ccbfc",
-          400: "#36b2f8",
-          500: "#0c98e9",
-          600: "#0079c7",
-          700: "#0160a1",
-          800: "#065285",
-          900: "#0b446e",
-          950: "#072b49",
+        paper: {
+          DEFAULT: "#f5f0e8",
+          dark: "#ebe4d8",
+        },
+        ink: {
+          DEFAULT: "#1c1917",
+          light: "#78716c",
+          faint: "#a8a29e",
+        },
+        rule: {
+          DEFAULT: "#d6d0c8",
+          dark: "#c4bcb0",
         },
         accent: {
-          DEFAULT: "#10b981",
-          light: "#34d399",
-          dark: "#059669",
+          DEFAULT: "#b84a32",
+          muted: "rgba(184, 74, 50, 0.12)",
         },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        mono: ["JetBrains Mono", "Courier New", "monospace"],
       },
     },
   },
