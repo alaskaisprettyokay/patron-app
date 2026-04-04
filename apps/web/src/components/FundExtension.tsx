@@ -64,10 +64,10 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
 
   if (!detected) {
     return (
-      <div className="card mb-8">
-        <div className="section-label mb-2">extension</div>
-        <p className="text-sm text-ink-light">
-          extension not detected. install onda for Chrome and refresh this page.
+      <div className="card mb-6">
+        <div className="section-label mb-1.5">extension</div>
+        <p className="text-xs text-ink-light">
+          extension not detected. install onda for Chrome and refresh.
         </p>
       </div>
     );
@@ -75,9 +75,9 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
 
   if (!extWallet) {
     return (
-      <div className="card mb-8">
-        <div className="section-label mb-2">extension</div>
-        <p className="text-sm text-ink-light">connecting to extension...</p>
+      <div className="card mb-6">
+        <div className="section-label mb-1.5">extension</div>
+        <p className="text-xs text-ink-light">connecting...</p>
       </div>
     );
   }
@@ -86,78 +86,74 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
   const hasUsdc = parseFloat(extWallet.usdcBalance || "0") > 0;
 
   return (
-    <div className="card mb-8">
-      <div className="section-label mb-4">extension account</div>
+    <div className="card mb-6">
+      <div className="section-label mb-3">extension account</div>
 
-      <div className="grid sm:grid-cols-2 gap-4 mb-4">
-        <div>
-          <div className="text-xs text-ink-faint mb-1">address</div>
-          <div
-            className="font-mono text-xs text-ink-light cursor-pointer hover:text-onda break-all"
+      <div className="space-y-1.5 mb-3 font-mono text-xs">
+        <div className="flex justify-between">
+          <span className="text-ink-faint">address</span>
+          <span
+            className="text-ink-light cursor-pointer hover:text-onda break-all text-right max-w-[200px]"
             onClick={() => navigator.clipboard.writeText(extWallet.address)}
             title="click to copy"
           >
-            {extWallet.address}
-          </div>
+            {extWallet.address.slice(0, 10)}...{extWallet.address.slice(-6)}
+          </span>
         </div>
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm">
-            <span className="text-ink-faint">balance</span>
-            <span className="mono-value">${extWallet.usdcBalance}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-ink-faint">gift balance</span>
-            <span className={`mono-value ${funded ? "text-onda" : "text-ink-light"}`}>
-              ${extWallet.escrowBalance}
-            </span>
-          </div>
+        <div className="flex justify-between">
+          <span className="text-ink-faint">balance</span>
+          <span>${extWallet.usdcBalance}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-ink-faint">gift balance</span>
+          <span className={funded ? "text-onda font-medium" : "text-ink-light"}>
+            ${extWallet.escrowBalance}
+          </span>
         </div>
       </div>
 
       {funded ? (
-        <div className="py-2 text-onda text-sm font-medium">
-          ready to send gifts.
+        <div className="text-onda text-xs font-mono font-medium">
+          ready to send gifts
         </div>
       ) : hasUsdc ? (
-        <div className="py-2 text-ink-light text-sm">
-          funds received. click deposit in the extension popup to activate.
+        <div className="text-ink-light text-xs">
+          funds received. click deposit in the extension popup.
         </div>
       ) : isConnected && !sent ? (
-        <div className="space-y-3">
-          <div className="text-sm text-ink-light">
+        <div className="space-y-2.5">
+          <div className="text-xs text-ink-light">
             add funds from your connected account:
           </div>
-          <div className="flex gap-2 items-center">
-            <div className="flex gap-1.5">
-              {[1, 5, 10, 20].map((preset) => (
-                <button
-                  key={preset}
-                  onClick={() => setAmount(String(preset))}
-                  className={`px-3 py-1.5 text-xs font-mono font-medium border transition-colors ${
-                    amount === String(preset)
-                      ? "border-ink bg-ink text-paper"
-                      : "border-rule text-ink-light hover:border-ink-light"
-                  }`}
-                >
-                  ${preset}
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-1.5 items-center flex-wrap">
+            {[1, 5, 10, 20].map((preset) => (
+              <button
+                key={preset}
+                onClick={() => setAmount(String(preset))}
+                className={`px-2.5 py-1 text-2xs font-mono font-medium border transition-colors ${
+                  amount === String(preset)
+                    ? "border-ink bg-ink text-paper"
+                    : "border-rule text-ink-light hover:border-ink-light"
+                }`}
+              >
+                ${preset}
+              </button>
+            ))}
             <button
               onClick={handleSend}
               disabled={isPending || isConfirming}
-              className="btn-primary text-sm px-4 py-1.5"
+              className="btn-primary text-2xs px-3 py-1"
             >
               {isConfirming ? "confirming..." : isPending ? "confirm in wallet..." : `send $${amount}`}
             </button>
           </div>
         </div>
       ) : sent ? (
-        <div className="py-2 text-onda text-sm font-medium">
-          funds sent. click deposit in the extension popup to activate.
+        <div className="text-onda text-xs font-mono font-medium">
+          funds sent. click deposit in the extension popup.
         </div>
       ) : (
-        <div className="text-sm text-ink-light">
+        <div className="text-xs text-ink-light">
           sign in above, then add funds.
         </div>
       )}

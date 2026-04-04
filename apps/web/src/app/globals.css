@@ -5,32 +5,49 @@
 @layer base {
   body {
     @apply bg-paper text-ink antialiased;
+    font-feature-settings: "ss01", "ss02";
+  }
+
+  /* Grain texture overlay — photocopied/risograph feel */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.3;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-ink text-paper font-medium py-2 px-5 border border-ink transition-colors duration-150;
+    @apply bg-ink text-paper font-mono text-sm font-medium py-2 px-5 border border-ink transition-colors duration-100;
   }
   .btn-primary:hover {
     @apply bg-transparent text-ink;
   }
   .btn-primary:disabled {
-    @apply opacity-50 cursor-default;
+    @apply opacity-40 cursor-default;
   }
   .btn-secondary {
-    @apply bg-transparent text-ink font-medium py-2 px-5 border border-rule-dark transition-colors duration-150;
+    @apply bg-transparent text-ink font-mono text-sm font-medium py-2 px-5 border border-rule-dark transition-colors duration-100;
   }
   .btn-secondary:hover {
     @apply border-ink;
   }
   .card {
-    @apply border border-rule p-5;
+    @apply border border-rule p-4;
   }
   .section-label {
-    @apply text-xs font-mono lowercase tracking-widest text-ink-faint;
+    @apply text-2xs font-mono lowercase tracking-receipt text-ink-faint;
   }
   .mono-value {
-    @apply font-mono tabular-nums;
+    @apply font-mono tabular-nums tracking-tight;
+  }
+  .receipt-divider {
+    @apply border-0 border-t border-dashed border-rule-dark my-3;
   }
 }

@@ -163,7 +163,7 @@ function update() {
       progressContainer.style.display = "block";
       progressFill.className = "progress-fill";
       progressFill.style.width = "100%";
-      progressFill.style.background = "#c27a3f";
+      progressFill.style.background = "#b5894c";
       giftResult.style.display = "block";
       giftResult.className = "gift-result";
       giftResult.textContent = scrobble.giftError || "couldn't send this one";

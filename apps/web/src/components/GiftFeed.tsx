@@ -13,19 +13,12 @@ interface GiftRecord {
 
 function timeAgo(ts: number): string {
   const seconds = Math.floor((Date.now() - ts) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  return `${hours}h ago`;
+  return `${hours}h`;
 }
-
-const platformNames: Record<string, string> = {
-  spotify: "spotify",
-  soundcloud: "soundcloud",
-  bandcamp: "bandcamp",
-  "youtube-music": "youtube music",
-};
 
 export function GiftFeed() {
   const [gifts, setGifts] = useState<GiftRecord[]>([]);
@@ -52,41 +45,37 @@ export function GiftFeed() {
 
   if (gifts.length === 0) {
     return (
-      <div className="py-6 text-ink-faint text-sm">
-        nothing yet. play music with the extension installed to start.
+      <div className="py-4 text-ink-faint text-xs font-mono">
+        nothing yet. play music with the extension installed.
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-rule">
+    <div className="divide-y divide-rule font-mono text-xs">
       {gifts.slice(0, 10).map((gift, i) => (
         <div
           key={`${gift.timestamp}-${i}`}
-          className="flex items-center justify-between py-3"
+          className="flex items-baseline justify-between py-2"
         >
-          <div>
-            <div className="font-medium text-sm">{gift.artist}</div>
-            <div className="text-xs text-ink-faint">{gift.track}</div>
+          <div className="min-w-0 mr-3">
+            <span className="font-medium text-sm">{gift.artist}</span>
+            <span className="text-ink-faint ml-2">{gift.track}</span>
           </div>
-          <div className="text-right">
-            <div className="mono-value text-sm font-medium">
-              {gift.txHash ? (
-                <a
-                  href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-onda hover:underline"
-                >
-                  ${gift.amount?.toFixed(2) || "0.01"}
-                </a>
-              ) : (
-                <span className="text-ink">${gift.amount?.toFixed(2) || "0.01"}</span>
-              )}
-            </div>
-            <div className="text-xs text-ink-faint">
-              {platformNames[gift.platform] || gift.platform} · {timeAgo(gift.timestamp)}
-            </div>
+          <div className="flex items-baseline gap-2 shrink-0">
+            {gift.txHash ? (
+              <a
+                href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-onda hover:underline font-medium"
+              >
+                ${gift.amount?.toFixed(2) || "0.01"}
+              </a>
+            ) : (
+              <span>${gift.amount?.toFixed(2) || "0.01"}</span>
+            )}
+            <span className="text-ink-faint text-2xs">{timeAgo(gift.timestamp)}</span>
           </div>
         </div>
       ))}

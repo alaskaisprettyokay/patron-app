@@ -28,21 +28,21 @@ export default function RootLayout({
       <body className="min-h-screen">
         <Providers>
           <nav className="border-b border-rule">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6">
-              <div className="flex justify-between items-center h-14">
-                <a href="/" className="font-mono text-base font-bold lowercase">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+              <div className="flex justify-between items-center h-11">
+                <a href="/" className="font-mono text-sm font-bold lowercase">
                   onda
                 </a>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-5">
                   <a
                     href="/dashboard"
-                    className="text-ink-light hover:text-ink transition-colors text-sm"
+                    className="text-ink-faint hover:text-ink transition-colors text-xs font-mono"
                   >
                     dashboard
                   </a>
                   <a
                     href="/claim"
-                    className="text-ink-light hover:text-ink transition-colors text-sm"
+                    className="text-ink-faint hover:text-ink transition-colors text-xs font-mono"
                   >
                     claim
                   </a>

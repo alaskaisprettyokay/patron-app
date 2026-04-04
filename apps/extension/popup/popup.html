@@ -4,98 +4,94 @@
   <meta charset="UTF-8">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       width: 320px;
       font-family: 'JetBrains Mono', 'Courier New', monospace;
-      background: #f5f0e8;
-      color: #1c1917;
-      padding: 16px;
-      font-size: 11px;
-      line-height: 1.5;
+      background: #f4efe6;
+      color: #1a1816;
+      padding: 14px 16px;
+      font-size: 10px;
+      line-height: 1.4;
+      /* Subtle grain */
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
     }
 
     /* Receipt header */
     .header {
-      padding-bottom: 10px;
-      margin-bottom: 10px;
-      border-bottom: 1px dashed #c4bcb0;
+      padding-bottom: 8px;
+      margin-bottom: 6px;
+      border-bottom: 1px dashed #bfb8ad;
     }
     .logo {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: lowercase;
+      letter-spacing: 0.3px;
     }
 
     /* Stats line */
     .stats-row {
       display: flex;
       justify-content: space-between;
-      padding: 2px 0;
-      color: #78716c;
+      padding: 1px 0;
+      color: #9c958e;
+      font-size: 9px;
+      letter-spacing: 0.5px;
     }
-    .stats-row strong { color: #1c1917; }
-    .stats-row .accent { color: #c27a3f; font-weight: 500; }
+    .stats-row strong { color: #1a1816; }
+    .stats-row .accent { color: #b5894c; font-weight: 500; }
 
     /* Divider */
     .divider {
       border: none;
-      border-top: 1px dashed #c4bcb0;
-      margin: 8px 0;
-    }
-    .divider-solid {
-      border: none;
-      border-top: 1px solid #c4bcb0;
-      margin: 8px 0;
+      border-top: 1px dashed #bfb8ad;
+      margin: 6px 0;
     }
 
     /* Section label */
     .label {
-      font-size: 9px;
-      text-transform: lowercase;
-      letter-spacing: 2px;
-      color: #a8a29e;
-      margin-bottom: 6px;
+      font-size: 8px;
+      letter-spacing: 1.5px;
+      color: #9c958e;
+      margin-bottom: 5px;
     }
 
     /* Now Playing */
     .now-playing {
-      padding: 8px 0;
+      padding: 6px 0;
     }
     .artist-name {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
-      color: #1c1917;
+      color: #1a1816;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.2;
     }
     .track-name {
-      font-size: 11px;
-      color: #78716c;
+      font-size: 10px;
+      color: #6b6560;
       margin-top: 1px;
     }
     .platform-badge {
       display: inline-block;
-      font-size: 9px;
-      padding: 1px 6px;
-      border: 1px solid #c4bcb0;
-      color: #78716c;
+      font-size: 8px;
+      padding: 1px 5px;
+      border: 1px solid #d2cbc2;
+      color: #9c958e;
       margin-top: 4px;
-      letter-spacing: 1px;
-      text-transform: lowercase;
+      letter-spacing: 0.8px;
     }
 
     /* Progress bar */
     .progress-container {
-      margin-top: 8px;
+      margin-top: 6px;
     }
     .progress-bar {
-      height: 3px;
-      background: #d6d0c8;
+      height: 2px;
+      background: #d2cbc2;
       overflow: hidden;
     }
     .progress-fill {
@@ -103,135 +99,139 @@
       transition: width 0.3s ease, background-color 0.3s ease;
       width: 0%;
     }
-    .progress-fill.listening { background: #1c1917; }
-    .progress-fill.complete { background: #c27a3f; }
+    .progress-fill.listening { background: #1a1816; }
+    .progress-fill.complete { background: #b5894c; }
     .progress-text {
       display: flex;
       justify-content: space-between;
-      font-size: 9px;
-      color: #a8a29e;
-      margin-top: 3px;
+      font-size: 8px;
+      color: #9c958e;
+      margin-top: 2px;
     }
 
     /* Gift result */
     .gift-result {
-      margin-top: 6px;
-      font-size: 11px;
+      margin-top: 5px;
+      font-size: 10px;
       font-weight: 500;
     }
-    .gift-result.sent { color: #c27a3f; }
-    .gift-result.escrowed { color: #78716c; }
+    .gift-result.sent { color: #b5894c; }
+    .gift-result.escrowed { color: #6b6560; }
     .gift-result a { color: inherit; }
 
     /* Gift detail lines */
     .gift-detail {
-      font-size: 10px;
-      color: #78716c;
+      font-size: 9px;
+      color: #6b6560;
       margin-top: 3px;
-      line-height: 1.6;
+      line-height: 1.5;
     }
-    .gift-detail .diamond { color: #c27a3f; }
+    .gift-detail .diamond { color: #b5894c; }
 
     /* History / receipt items */
     .history-item {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      padding: 3px 0;
+      padding: 2px 0;
+      font-size: 9px;
+    }
+    .history-item .h-artist {
+      color: #1a1816;
+      font-weight: 500;
       font-size: 10px;
     }
-    .history-item .h-artist { color: #1c1917; font-weight: 500; }
-    .history-item .h-track { color: #a8a29e; font-size: 9px; }
-    .history-item .amount { color: #c27a3f; font-weight: 500; text-align: right; white-space: nowrap; }
+    .history-item .h-track { color: #9c958e; font-size: 8px; }
+    .history-item .amount { color: #b5894c; font-weight: 500; text-align: right; white-space: nowrap; }
     .history-item .amount a { color: inherit; text-decoration: none; }
     .history-item .amount a:hover { text-decoration: underline; }
 
     .empty-state {
-      text-align: center;
-      padding: 20px 0;
-      color: #a8a29e;
-      font-size: 10px;
+      padding: 16px 0;
+      color: #9c958e;
+      font-size: 9px;
     }
 
     /* Wallet section */
     .wallet-section {
-      padding: 8px 0;
+      padding: 4px 0;
     }
     .wallet-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 2px 0;
+      padding: 1px 0;
+      font-size: 9px;
     }
-    .wallet-label { color: #a8a29e; font-size: 10px; }
+    .wallet-label { color: #9c958e; }
     .wallet-addr {
-      color: #78716c;
-      font-size: 10px;
+      color: #6b6560;
       cursor: pointer;
+      font-size: 9px;
     }
-    .wallet-addr:hover { color: #c27a3f; }
-    .wallet-val { color: #1c1917; font-weight: 500; }
-    .wallet-val.funded { color: #c27a3f; }
-    .wallet-val.empty { color: #a8a29e; }
+    .wallet-addr:hover { color: #b5894c; }
+    .wallet-val { color: #1a1816; font-weight: 500; }
+    .wallet-val.funded { color: #b5894c; }
+    .wallet-val.empty { color: #9c958e; }
     .wallet-btn {
       width: 100%;
-      background: #1c1917;
-      color: #f5f0e8;
-      border: 1px solid #1c1917;
-      padding: 8px;
+      background: #1a1816;
+      color: #f4efe6;
+      border: 1px solid #1a1816;
+      padding: 6px;
       font-family: inherit;
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 8px;
-      letter-spacing: 1px;
-      text-transform: lowercase;
+      margin-top: 6px;
+      letter-spacing: 0.8px;
     }
-    .wallet-btn:hover { background: transparent; color: #1c1917; }
-    .wallet-btn:disabled { opacity: 0.4; cursor: default; }
+    .wallet-btn:hover { background: transparent; color: #1a1816; }
+    .wallet-btn:disabled { opacity: 0.3; cursor: default; }
     .wallet-btn-sm {
       width: 100%;
       background: transparent;
-      color: #78716c;
-      border: 1px solid #c4bcb0;
-      padding: 5px;
+      color: #6b6560;
+      border: 1px solid #d2cbc2;
+      padding: 4px;
       font-family: inherit;
-      font-size: 10px;
+      font-size: 8px;
       cursor: pointer;
-      margin-top: 6px;
+      margin-top: 4px;
     }
-    .wallet-btn-sm:hover { border-color: #1c1917; color: #1c1917; }
-    .wallet-fund { margin-top: 6px; }
-    .fund-label { font-size: 9px; color: #a8a29e; margin-bottom: 3px; letter-spacing: 1px; }
+    .wallet-btn-sm:hover { border-color: #1a1816; color: #1a1816; }
+    .wallet-fund { margin-top: 5px; }
+    .fund-label { font-size: 8px; color: #9c958e; margin-bottom: 2px; letter-spacing: 0.8px; }
     .fund-addr {
-      font-size: 9px;
-      color: #78716c;
+      font-size: 8px;
+      color: #6b6560;
       word-break: break-all;
-      background: #ebe4d8;
-      padding: 6px;
-      border: 1px solid #c4bcb0;
+      background: #eae3d6;
+      padding: 5px;
+      border: 1px solid #d2cbc2;
+      line-height: 1.4;
     }
     .wallet-ready {
-      color: #c27a3f;
-      font-size: 10px;
+      color: #b5894c;
+      font-size: 9px;
       font-weight: 500;
-      margin-top: 6px;
+      margin-top: 5px;
     }
-    .wallet-error { color: #c27a3f; font-size: 10px; }
+    .wallet-error { color: #b5894c; font-size: 9px; }
 
     /* Footer */
     .footer {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px dashed #c4bcb0;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed #bfb8ad;
     }
     .footer a {
-      font-size: 9px;
-      color: #a8a29e;
+      font-size: 8px;
+      color: #9c958e;
       text-decoration: none;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
     }
-    .footer a:hover { color: #1c1917; }
+    .footer a:hover { color: #1a1816; }
   </style>
 </head>
 <body>

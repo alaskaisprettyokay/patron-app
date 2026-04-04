@@ -50,14 +50,14 @@ export default function DashboardPage() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
-        <h1 className="text-2xl font-bold mb-2">dashboard</h1>
-        <p className="text-ink-light text-sm mb-6">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16">
+        <h1 className="text-lg font-bold mb-1">dashboard</h1>
+        <p className="text-ink-light text-xs mb-6">
           sign in to start supporting artists.
         </p>
         <div className="card">
-          <p className="text-ink-light text-sm">
-            use the connect button in the navigation bar to get started.
+          <p className="text-ink-light text-xs">
+            use the connect button above to get started.
           </p>
         </div>
       </div>
@@ -65,32 +65,31 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">dashboard</h1>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-lg font-bold">dashboard</h1>
         <WorldIDVerify onVerified={() => setIsHumanVerified(true)} />
       </div>
 
-      {/* Balance row */}
-      <div className="grid sm:grid-cols-3 gap-px bg-rule mb-8 border border-rule">
-        <div className="bg-paper p-4">
-          <div className="section-label mb-1">gift balance</div>
-          <div className="mono-value text-xl font-bold">
-            ${balance ? formatUSDC(balance) : "0.00"}
+      {/* Balance row — receipt style */}
+      <div className="border border-rule mb-6">
+        <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-rule">
+          <div className="p-3">
+            <div className="section-label mb-0.5">gift balance</div>
+            <div className="mono-value text-lg font-bold">
+              ${balance ? formatUSDC(balance) : "0.00"}
+            </div>
           </div>
-          <div className="text-xs text-ink-faint mt-0.5">available</div>
-        </div>
-        <div className="bg-paper p-4">
-          <div className="section-label mb-1">total given</div>
-          <div className="mono-value text-xl font-bold text-onda">
-            ${totalGiven ? formatUSDC(totalGiven) : "0.00"}
+          <div className="p-3">
+            <div className="section-label mb-0.5">total given</div>
+            <div className="mono-value text-lg font-bold text-onda">
+              ${totalGiven ? formatUSDC(totalGiven) : "0.00"}
+            </div>
           </div>
-          <div className="text-xs text-ink-faint mt-0.5">lifetime</div>
-        </div>
-        <div className="bg-paper p-4">
-          <div className="section-label mb-1">artists</div>
-          <div className="mono-value text-xl font-bold">{uniqueArtists}</div>
-          <div className="text-xs text-ink-faint mt-0.5">supported</div>
+          <div className="p-3">
+            <div className="section-label mb-0.5">artists</div>
+            <div className="mono-value text-lg font-bold">{uniqueArtists}</div>
+          </div>
         </div>
       </div>
 
@@ -98,9 +97,9 @@ export default function DashboardPage() {
       <FundExtension onWalletDetected={onExtWalletDetected} />
 
       {/* Setup checklist */}
-      <div className="card mb-8">
-        <div className="section-label mb-4">setup</div>
-        <div className="space-y-2.5">
+      <div className="card mb-6">
+        <div className="section-label mb-3">setup</div>
+        <div className="space-y-2">
           <CheckItem done={isConnected} label="sign in" />
           <CheckItem done={isHumanVerified} label="verify you're human" />
           <CheckItem done={!!extWalletAddr} label="extension detected" />
@@ -111,7 +110,7 @@ export default function DashboardPage() {
 
       {/* Recent gifts */}
       <div className="card">
-        <div className="section-label mb-4">recent</div>
+        <div className="section-label mb-3">recent</div>
         <GiftFeed />
       </div>
     </div>
@@ -120,22 +119,10 @@ export default function DashboardPage() {
 
 function CheckItem({ done, label }: { done: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <div
-        className={`w-4 h-4 border flex items-center justify-center ${
-          done ? "border-onda bg-onda-muted" : "border-rule-dark"
-        }`}
-      >
-        {done && (
-          <svg className="w-2.5 h-2.5 text-onda" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )}
-      </div>
+    <div className="flex items-center gap-2.5 font-mono text-xs">
+      <span className={done ? "text-onda" : "text-ink-faint"}>
+        {done ? "[x]" : "[ ]"}
+      </span>
       <span className={done ? "text-ink-faint line-through" : "text-ink"}>
         {label}
       </span>
