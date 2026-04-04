@@ -69,7 +69,7 @@ export default function DashboardPage() {
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">
       {/* Hero — your total */}
       <div className="mb-12">
-        <div className="text-xs uppercase tracking-widest text-ink-faint mb-2">total given</div>
+        <div className="text-xs uppercase tracking-widest text-ink-faint mb-2">Balance</div>
         <div className="font-mono text-6xl sm:text-7xl font-bold tracking-tight text-onda leading-none">
           ${balance ? formatUSDC(balance) : "0.00"}
         </div>
