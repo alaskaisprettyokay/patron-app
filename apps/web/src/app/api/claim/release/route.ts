@@ -3,13 +3,37 @@ import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
 import { ESCROW_ADDRESS, PATRON_ESCROW_ABI } from "@/lib/contracts";
+import { isVerified, checkRateLimit } from "@/lib/verified-store";
 
 export async function POST(request: NextRequest) {
   try {
-    const { mbidHash } = await request.json();
+    const ip = request.headers.get("x-forwarded-for") || request.ip || "unknown";
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429 }
+      );
+    }
+
+    const { mbidHash, mbid } = await request.json();
 
     if (!mbidHash) {
       return NextResponse.json({ error: "mbidHash is required" }, { status: 400 });
+    }
+
+    if (!mbid || typeof mbid !== "string") {
+      return NextResponse.json(
+        { error: "mbid is required to verify off-chain status" },
+        { status: 400 }
+      );
+    }
+
+    // Gate: require off-chain verification before triggering on-chain release
+    if (!isVerified(mbid)) {
+      return NextResponse.json(
+        { error: "Artist has not completed off-chain verification. Complete the verification step first." },
+        { status: 403 }
+      );
     }
 
     // Check relayer key is configured

@@ -17,7 +17,10 @@ export default function ClaimPage() {
   const [selectedArtist, setSelectedArtist] = useState<MBArtist | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [verifyUrl, setVerifyUrl] = useState("");
+  const [allowedUrls, setAllowedUrls] = useState<string[]>([]);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<number | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [loadingCode, setLoadingCode] = useState(false);
   const [releaseResult, setReleaseResult] = useState<{
     txHash?: string;
     unclaimedReleased?: string;
@@ -43,21 +46,38 @@ export default function ClaimPage() {
 
   const handleSelectArtist = async (artist: MBArtist) => {
     setSelectedArtist(artist);
-    const code = `patron-verify-${artist.id.slice(0, 8)}`;
-    setVerificationCode(code);
+    setLoadingCode(true);
+    setError("");
 
     try {
-      const details = await getArtistDetails(artist.id);
-      const urls = getArtistUrls(details.relations);
-      setVerifyUrl(urls.bandcamp || urls.website || urls.soundcloud || "");
-    } catch {
-      // URLs are optional
-    }
+      // Request a server-generated verification code
+      const res = await fetch("/api/verify/code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mbid: artist.id }),
+      });
 
-    setStep("verify");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Could not generate verification code.");
+        setLoadingCode(false);
+        return;
+      }
+
+      setVerificationCode(data.code);
+      setCodeExpiresAt(data.expiresAt);
+      setAllowedUrls(data.allowedUrls || []);
+      setVerifyUrl(data.allowedUrls?.[0] || "");
+      setStep("verify");
+    } catch {
+      setError("Failed to request verification code.");
+    } finally {
+      setLoadingCode(false);
+    }
   };
 
-  const handleVerify = async (demo: boolean) => {
+  const handleVerify = async () => {
     setVerifying(true);
     setError("");
     try {
@@ -67,8 +87,7 @@ export default function ClaimPage() {
         body: JSON.stringify({
           mbid: selectedArtist!.id,
           code: verificationCode,
-          url: demo ? undefined : verifyUrl,
-          demo,
+          url: verifyUrl,
         }),
       });
 
@@ -113,7 +132,7 @@ export default function ClaimPage() {
       const res = await fetch("/api/claim/release", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mbidHash }),
+        body: JSON.stringify({ mbidHash, mbid: selectedArtist.id }),
       });
 
       const data = await res.json();
@@ -205,6 +224,7 @@ export default function ClaimPage() {
                 <button
                   key={artist.id}
                   onClick={() => handleSelectArtist(artist)}
+                  disabled={loadingCode}
                   className="w-full text-left py-3 hover:bg-paper-dark transition-colors"
                 >
                   <div className="font-medium text-sm">{artist.name}</div>
@@ -217,6 +237,9 @@ export default function ClaimPage() {
               ))}
             </div>
           )}
+          {loadingCode && (
+            <p className="text-ink-faint text-xs mt-2">Generating verification code...</p>
+          )}
         </div>
       )}
 
@@ -227,53 +250,55 @@ export default function ClaimPage() {
             Verify you're {selectedArtist.name}
           </div>
 
-          {verifyUrl ? (
-            <>
-              <p className="text-ink-light text-sm mb-4">
-                Add this verification code to your page, then click verify:
-              </p>
-              <div className="bg-paper-dark border border-rule p-3 mb-4 font-mono text-sm text-accent text-center select-all">
-                {verificationCode}
-              </div>
-              <p className="text-ink-faint text-xs mb-4">
-                Your page:{" "}
-                <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                  {verifyUrl}
-                </a>
-              </p>
-              <div className="flex gap-3">
-                <button onClick={() => setStep("search")} className="btn-secondary text-sm">
-                  Back
-                </button>
-                <button onClick={() => handleVerify(false)} disabled={verifying} className="btn-primary text-sm flex-1">
-                  {verifying ? "Checking..." : "I've added the code — verify"}
-                </button>
-              </div>
-              <div className="mt-3 pt-3 border-t border-rule">
-                <button
-                  onClick={() => handleVerify(true)}
-                  disabled={verifying}
-                  className="text-xs text-ink-faint hover:text-ink w-full text-center"
-                >
-                  Skip verification (demo mode)
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-ink-light text-sm mb-4">
-                No website found for this artist on MusicBrainz. You can use demo mode to proceed.
-              </p>
-              <div className="flex gap-3">
-                <button onClick={() => setStep("search")} className="btn-secondary text-sm">
-                  Back
-                </button>
-                <button onClick={() => handleVerify(true)} disabled={verifying} className="btn-primary text-sm flex-1">
-                  {verifying ? "Verifying..." : "Continue in demo mode"}
-                </button>
-              </div>
-            </>
+          <p className="text-ink-light text-sm mb-4">
+            Add this verification code to one of your linked pages, then click verify:
+          </p>
+          <div className="bg-paper-dark border border-rule p-3 mb-4 font-mono text-sm text-accent text-center select-all">
+            {verificationCode}
+          </div>
+
+          {codeExpiresAt && (
+            <p className="text-ink-faint text-xs mb-4">
+              Code expires at {new Date(codeExpiresAt).toLocaleTimeString()}.
+            </p>
           )}
+
+          {allowedUrls.length > 1 && (
+            <div className="mb-4">
+              <label className="text-ink-faint text-xs block mb-1">
+                Verify against one of your linked pages:
+              </label>
+              <select
+                value={verifyUrl}
+                onChange={(e) => setVerifyUrl(e.target.value)}
+                className="w-full bg-paper border border-rule px-3 py-2 text-ink text-sm focus:outline-none focus:border-ink"
+              >
+                {allowedUrls.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {allowedUrls.length === 1 && (
+            <p className="text-ink-faint text-xs mb-4">
+              Your page:{" "}
+              <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                {verifyUrl}
+              </a>
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep("search")} className="btn-secondary text-sm">
+              Back
+            </button>
+            <button onClick={handleVerify} disabled={verifying} className="btn-primary text-sm flex-1">
+              {verifying ? "Checking..." : "I've added the code — verify"}
+            </button>
+          </div>
         </div>
       )}
 
