@@ -6,5 +6,8 @@
     "dev": "cd apps/web && npm run dev",
     "build": "cd apps/web && npm run build",
     "extension:build": "cd apps/extension && npm run build"
+  },
+  "dependencies": {
+    "ethers": "^6.16.0"
   }
 }

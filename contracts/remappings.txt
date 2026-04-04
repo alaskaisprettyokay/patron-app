@@ -1,2 +1,5 @@
 @openzeppelin/=lib/openzeppelin-contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 forge-std/=lib/forge-std/src/
+@ensdomains/ens-contracts/=lib/durin/lib/ens-contracts/contracts/
+@arachnid/string-utils/=lib/durin/lib/solidity-stringutils/src/

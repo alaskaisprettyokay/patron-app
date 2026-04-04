@@ -3,10 +3,12 @@ src = "src"
 out = "out"
 libs = ["lib"]
 solc = "0.8.24"
-env_file = ".env"
+optimizer = true
+optimizer_runs = 1
 
 [profile.default.fmt]
 line_length = 100
 
 [rpc_endpoints]
 arc_testnet = "https://rpc.testnet.arc.network"
+sepolia = "${SEPOLIA_RPC_URL}"
