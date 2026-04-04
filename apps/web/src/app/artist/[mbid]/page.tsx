@@ -89,7 +89,17 @@ export default function ArtistPage() {
     args: [mbidHash],
   });
 
-  // Derived stats
+  const { data: defaultTipAmount } = useReadContract({
+    address: ESCROW_ADDRESS,
+    abi: ONDA_ESCROW_ABI,
+    functionName: "defaultTipAmount",
+  });
+
+  // Derived stats — use on-chain data as primary source
+  const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
+  const tipSize = (defaultTipAmount as bigint) || 10000n; // $0.01 in 6-decimal USDC
+  const onChainGiftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
+
   const uniqueSupporters = useMemo(() => {
     const addrs = new Set(gifts.map((g) => g.listenerAddress).filter(Boolean));
     return addrs.size;
@@ -148,7 +158,6 @@ export default function ArtistPage() {
   const urls = getArtistUrls(artist.relations);
   const wallet = artistInfo ? (artistInfo as [string, boolean, bigint])[0] : undefined;
   const verified = artistInfo ? (artistInfo as [string, boolean, bigint])[1] : false;
-  const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
   const isClaimed = wallet && wallet !== "0x0000000000000000000000000000000000000000";
   const ensName = subname ? formatENSName(subname as string) : null;
 
@@ -193,15 +202,15 @@ export default function ArtistPage() {
       {/* Stats row */}
       <div className="grid sm:grid-cols-3 gap-6 mb-12">
         <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">{gifts.length}</div>
+          <div className="font-mono text-2xl font-bold">{onChainGiftCount}</div>
           <div className="text-sm text-ink-light">total gifts</div>
         </div>
         <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">{uniqueSupporters}</div>
+          <div className="font-mono text-2xl font-bold">{uniqueSupporters || "—"}</div>
           <div className="text-sm text-ink-light">supporters</div>
         </div>
         <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">{uniqueTracks}</div>
+          <div className="font-mono text-2xl font-bold">{uniqueTracks || "—"}</div>
           <div className="text-sm text-ink-light">tracks played</div>
         </div>
       </div>
