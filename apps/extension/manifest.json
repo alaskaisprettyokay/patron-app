@@ -1,14 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Patron — Music Micropayments",
+  "name": "Patron \u2014 Music Micropayments",
   "version": "0.1.0",
-  "description": "Auto-tip artists when you listen to music. Detects tracks on Spotify, SoundCloud, Bandcamp, and YouTube Music.",
-  "permissions": ["storage", "tabs", "activeTab"],
+  "description": "Auto-tip artists when you listen to music. Detects tracks on Spotify, SoundCloud, Bandcamp, YouTube Music, and Subcult.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
   "host_permissions": [
     "https://open.spotify.com/*",
     "https://soundcloud.com/*",
     "https://*.bandcamp.com/*",
     "https://music.youtube.com/*",
+    "https://app.subcult.music/*",
     "http://localhost:3000/*"
   ],
   "background": {
@@ -16,28 +21,57 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://open.spotify.com/*"],
-      "js": ["content/spotify.js"],
+      "matches": [
+        "https://open.spotify.com/*"
+      ],
+      "js": [
+        "content/spotify.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://soundcloud.com/*"],
-      "js": ["content/soundcloud.js"],
+      "matches": [
+        "https://soundcloud.com/*"
+      ],
+      "js": [
+        "content/soundcloud.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://*.bandcamp.com/*"],
-      "js": ["content/bandcamp.js"],
+      "matches": [
+        "https://*.bandcamp.com/*"
+      ],
+      "js": [
+        "content/bandcamp.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://music.youtube.com/*"],
-      "js": ["content/youtube-music.js"],
+      "matches": [
+        "https://music.youtube.com/*"
+      ],
+      "js": [
+        "content/youtube-music.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://localhost:3000/*"],
-      "js": ["content/patron-bridge.js"],
+      "matches": [
+        "https://app.subcult.music/*"
+      ],
+      "js": [
+        "content/subcult.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost:3000/*"
+      ],
+      "js": [
+        "content/patron-bridge.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -53,8 +87,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "externally_connectable": {
-    "matches": ["http://localhost:*/*", "https://*.patron.app/*"]
   }
 }

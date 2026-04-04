@@ -5,6 +5,7 @@ const platformNames = {
   soundcloud: "SoundCloud",
   bandcamp: "Bandcamp",
   "youtube-music": "YouTube Music",
+  subcult: "Subcult",
 };
 
 // --- Wallet UI ---
