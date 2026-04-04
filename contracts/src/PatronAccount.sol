@@ -45,6 +45,13 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
  *    - Account forwards the call to PatronEscrow
  * 5. Listener can revoke session key at any time
  *
+ * ARC NETWORK
+ * ===========
+ * Arc uses USDC as both the tipping currency AND the native gas token.
+ * This simplifies things: the session key needs a small USDC balance for gas,
+ * and we can fund it directly from the account. The owner can call
+ * fundSessionKey() to top up gas, or authorizeSession() can auto-fund.
+ *
  * NOTE FOR CONTRACT DEV
  * =====================
  * This is an architecture sketch, not production code. Consider:
@@ -91,6 +98,7 @@ contract PatronAccount {
     );
     event SessionRevoked(address indexed sessionKey);
     event SessionExecuted(address indexed sessionKey, address indexed target, bytes4 selector);
+    event SessionKeyFunded(address indexed sessionKey, uint256 amount);
 
     // =====================================================
     // MODIFIERS
@@ -116,6 +124,10 @@ contract PatronAccount {
     /**
      * Authorize a session key for the browser extension.
      *
+     * On Arc, USDC is the native gas token. Pass a gasStipend to
+     * auto-fund the session key so it can pay for tx fees.
+     * e.g., 100000 = $0.10 USDC = ~100 tip transactions.
+     *
      * Example usage (from listener's main wallet):
      *   authorizeSession(
      *     0xABCD...,                           // extension-generated pubkey
@@ -123,7 +135,8 @@ contract PatronAccount {
      *     0x8f39d613,                          // bytes4(keccak256("tipDefault(bytes32)"))
      *     2_000_000,                           // 2 USDC per period (6 decimals)
      *     86400,                               // 1 day period
-     *     block.timestamp + 30 days            // expires in 30 days
+     *     block.timestamp + 30 days,           // expires in 30 days
+     *     100000                               // $0.10 gas stipend
      *   )
      */
     function authorizeSession(
@@ -132,7 +145,8 @@ contract PatronAccount {
         bytes4 _selector,
         uint256 _spendLimit,
         uint256 _periodDuration,
-        uint256 _validUntil
+        uint256 _validUntil,
+        uint256 _gasStipend
     ) external onlyOwner {
         require(_key != address(0), "Invalid key");
         require(_validUntil > block.timestamp, "Already expired");
@@ -149,7 +163,25 @@ contract PatronAccount {
             active: true
         });
 
+        // Fund session key with gas (USDC is native currency on Arc)
+        if (_gasStipend > 0) {
+            (bool sent, ) = _key.call{value: _gasStipend}("");
+            require(sent, "Gas stipend transfer failed");
+            emit SessionKeyFunded(_key, _gasStipend);
+        }
+
         emit SessionAuthorized(_key, _target, _spendLimit, _periodDuration, _validUntil);
+    }
+
+    /**
+     * Top up a session key's gas balance.
+     * On Arc, this sends native USDC for transaction fees.
+     */
+    function fundSessionKey(address _key, uint256 _amount) external onlyOwner {
+        require(sessionKeys[_key].active, "Session not active");
+        (bool sent, ) = _key.call{value: _amount}("");
+        require(sent, "Transfer failed");
+        emit SessionKeyFunded(_key, _amount);
     }
 
     function revokeSession(address _key) external onlyOwner {

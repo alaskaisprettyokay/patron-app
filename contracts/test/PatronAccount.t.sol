@@ -36,13 +36,17 @@ contract PatronAccountTest is Test {
 
         // Authorize session key: can only call tipDefault on escrow,
         // 2 USDC/day limit, expires in 30 days
+        // Fund the account with native USDC for gas stipends
+        vm.deal(address(account), 1e6); // $1 USDC native for gas
+
         account.authorizeSession(
             sessionKey,
             address(escrow),
             tipSelector,
             2_000_000,  // 2 USDC per period
             86400,      // 1 day
-            block.timestamp + 30 days
+            block.timestamp + 30 days,
+            100000      // $0.10 gas stipend to session key
         );
     }
 
@@ -84,12 +88,17 @@ contract PatronAccountTest is Test {
         assertTrue(active);
     }
 
+    function testAuthorizeSessionFundsGas() public view {
+        // Session key should have received the gas stipend
+        assertEq(sessionKey.balance, 100000);
+    }
+
     function testAuthorizeSessionNotOwner() public {
         vm.prank(address(0xBAD));
         vm.expectRevert("Not owner");
         account.authorizeSession(
             address(0x999), address(escrow), tipSelector,
-            2_000_000, 86400, block.timestamp + 30 days
+            2_000_000, 86400, block.timestamp + 30 days, 0
         );
     }
 
@@ -97,7 +106,7 @@ contract PatronAccountTest is Test {
         vm.expectRevert("Invalid key");
         account.authorizeSession(
             address(0), address(escrow), tipSelector,
-            2_000_000, 86400, block.timestamp + 30 days
+            2_000_000, 86400, block.timestamp + 30 days, 0
         );
     }
 
@@ -105,8 +114,22 @@ contract PatronAccountTest is Test {
         vm.expectRevert("Already expired");
         account.authorizeSession(
             address(0x999), address(escrow), tipSelector,
-            2_000_000, 86400, block.timestamp - 1
+            2_000_000, 86400, block.timestamp - 1, 0
         );
+    }
+
+    function testFundSessionKey() public {
+        uint256 balBefore = sessionKey.balance;
+        vm.deal(address(account), 200000);
+        account.fundSessionKey(sessionKey, 200000);
+        assertEq(sessionKey.balance, balBefore + 200000);
+    }
+
+    function testFundSessionKeyNotActive() public {
+        account.revokeSession(sessionKey);
+        vm.deal(address(account), 100000);
+        vm.expectRevert("Session not active");
+        account.fundSessionKey(sessionKey, 100000);
     }
 
     // =========================================
