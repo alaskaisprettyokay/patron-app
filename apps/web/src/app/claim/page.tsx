@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
-import { searchArtist, type MBArtist } from "@/lib/musicbrainz";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { searchArtist, getArtistDetails, getArtistUrls, type MBArtist } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, PATRON_ESCROW_ABI, mbidToBytes32, formatUSDC } from "@/lib/contracts";
 import { artistToSubname, formatENSName } from "@/lib/ens";
 
-type Step = "search" | "verify" | "claim" | "done";
+type Step = "search" | "verify" | "claim" | "releasing" | "done";
 
 export default function ClaimPage() {
   const { address, isConnected } = useAccount();
@@ -15,47 +15,20 @@ export default function ClaimPage() {
   const [results, setResults] = useState<MBArtist[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState<MBArtist | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verifyUrl, setVerifyUrl] = useState("");
+  const [allowedUrls, setAllowedUrls] = useState<string[]>([]);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<number | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [loadingCode, setLoadingCode] = useState(false);
+  const [releaseResult, setReleaseResult] = useState<{
+    txHash?: string;
+    unclaimedReleased?: string;
+  } | null>(null);
   const [error, setError] = useState("");
 
-  const mbidHash = selectedArtist ? mbidToBytes32(selectedArtist.id) : undefined;
-
-  // --- Contract writes ---
-  const { writeContract: writeClaim, data: claimHash } = useWriteContract();
+  const { writeContract, data: claimHash } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash });
-
-  // --- Contract reads (only active after artist selected) ---
-  const { data: challengeData } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: PATRON_ESCROW_ABI,
-    functionName: "getVerificationChallenge",
-    args: mbidHash && claimConfirmed ? [mbidHash] : undefined,
-    query: { enabled: !!mbidHash && claimConfirmed },
-  });
-
-  const { data: artistInfo, refetch: refetchArtistInfo } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: PATRON_ESCROW_ABI,
-    functionName: "getArtistInfo",
-    args: mbidHash ? [mbidHash] : undefined,
-    query: { enabled: !!mbidHash },
-  });
-
-  const { data: threshold } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: PATRON_ESCROW_ABI,
-    functionName: "attestationThreshold",
-  });
-
-  const { data: currentAttestations, refetch: refetchAttestations } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: PATRON_ESCROW_ABI,
-    functionName: "attestationCount",
-    args: mbidHash ? [mbidHash] : undefined,
-    query: { enabled: !!mbidHash },
-  });
-
-  const verificationChallenge = challengeData as `0x${string}` | undefined;
-  const isOnChainVerified = artistInfo ? (artistInfo as [string, boolean, bigint])[1] : false;
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -71,22 +44,77 @@ export default function ClaimPage() {
     }
   };
 
-  const handleSelectArtist = (artist: MBArtist) => {
+  const handleSelectArtist = async (artist: MBArtist) => {
     setSelectedArtist(artist);
+    setLoadingCode(true);
     setError("");
-    setStep("claim");
+
+    try {
+      // Request a server-generated verification code
+      const res = await fetch("/api/verify/code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mbid: artist.id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Could not generate verification code.");
+        setLoadingCode(false);
+        return;
+      }
+
+      setVerificationCode(data.code);
+      setCodeExpiresAt(data.expiresAt);
+      setAllowedUrls(data.allowedUrls || []);
+      setVerifyUrl(data.allowedUrls?.[0] || "");
+      setStep("verify");
+    } catch {
+      setError("Failed to request verification code.");
+    } finally {
+      setLoadingCode(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    setVerifying(true);
+    setError("");
+    try {
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mbid: selectedArtist!.id,
+          code: verificationCode,
+          url: verifyUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.verified) {
+        setStep("claim");
+      } else {
+        setError(data.error || "Verification failed.");
+      }
+    } catch {
+      setError("Verification request failed.");
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const handleClaim = () => {
     if (!selectedArtist || !address) return;
     setError("");
+    const mbidHash = mbidToBytes32(selectedArtist.id);
 
-    writeClaim(
+    writeContract(
       {
         address: ESCROW_ADDRESS,
         abi: PATRON_ESCROW_ABI,
         functionName: "claimArtist",
-        args: [mbidToBytes32(selectedArtist.id)],
+        args: [mbidHash],
       },
       {
         onError: (err) => setError(err.message),
@@ -94,11 +122,30 @@ export default function ClaimPage() {
     );
   };
 
-  const handleCheckStatus = async () => {
-    await refetchArtistInfo();
-    await refetchAttestations();
-    if (isOnChainVerified) {
-      setStep("done");
+  const handleRelease = async () => {
+    if (!selectedArtist) return;
+    setStep("releasing");
+    setError("");
+    const mbidHash = mbidToBytes32(selectedArtist.id);
+
+    try {
+      const res = await fetch("/api/claim/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mbidHash, mbid: selectedArtist.id }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setReleaseResult(data);
+        setStep("done");
+      } else {
+        setError(data.error || "Release failed.");
+        setStep("claim");
+      }
+    } catch {
+      setError("Release request failed.");
+      setStep("claim");
     }
   };
 
@@ -118,15 +165,14 @@ export default function ClaimPage() {
     );
   }
 
-  const steps: Step[] = ["search", "claim", "verify", "done"];
-  const currentStep = isOnChainVerified && step !== "search" ? "done" : claimConfirmed && step === "claim" ? "verify" : step;
-  const stepIndex = steps.indexOf(currentStep);
+  const steps: Step[] = ["search", "verify", "claim", "done"];
+  const stepIndex = steps.indexOf(step === "releasing" ? "done" : step);
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
       <h1 className="text-2xl font-bold mb-1">Claim your artist profile</h1>
       <p className="text-ink-light text-sm mb-8">
-        Claim on-chain. Get verified by independent attestors. Start receiving tips.
+        Verify you're the artist. Connect your wallet. Start receiving tips.
       </p>
 
       {/* Progress */}
@@ -156,7 +202,7 @@ export default function ClaimPage() {
       )}
 
       {/* Step 1: Search */}
-      {currentStep === "search" && (
+      {step === "search" && (
         <div className="card">
           <div className="section-label mb-4">Find your artist profile</div>
           <div className="flex gap-2 mb-4">
@@ -178,6 +224,7 @@ export default function ClaimPage() {
                 <button
                   key={artist.id}
                   onClick={() => handleSelectArtist(artist)}
+                  disabled={loadingCode}
                   className="w-full text-left py-3 hover:bg-paper-dark transition-colors"
                 >
                   <div className="font-medium text-sm">{artist.name}</div>
@@ -190,13 +237,75 @@ export default function ClaimPage() {
               ))}
             </div>
           )}
+          {loadingCode && (
+            <p className="text-ink-faint text-xs mt-2">Generating verification code...</p>
+          )}
         </div>
       )}
 
-      {/* Step 2: Claim on-chain */}
-      {currentStep === "claim" && selectedArtist && (
+      {/* Step 2: Verify */}
+      {step === "verify" && selectedArtist && (
         <div className="card">
-          <div className="section-label mb-4">Claim your profile on-chain</div>
+          <div className="section-label mb-4">
+            Verify you're {selectedArtist.name}
+          </div>
+
+          <p className="text-ink-light text-sm mb-4">
+            Add this verification code to one of your linked pages, then click verify:
+          </p>
+          <div className="bg-paper-dark border border-rule p-3 mb-4 font-mono text-sm text-accent text-center select-all">
+            {verificationCode}
+          </div>
+
+          {codeExpiresAt && (
+            <p className="text-ink-faint text-xs mb-4">
+              Code expires at {new Date(codeExpiresAt).toLocaleTimeString()}.
+            </p>
+          )}
+
+          {allowedUrls.length > 1 && (
+            <div className="mb-4">
+              <label className="text-ink-faint text-xs block mb-1">
+                Verify against one of your linked pages:
+              </label>
+              <select
+                value={verifyUrl}
+                onChange={(e) => setVerifyUrl(e.target.value)}
+                className="w-full bg-paper border border-rule px-3 py-2 text-ink text-sm focus:outline-none focus:border-ink"
+              >
+                {allowedUrls.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {allowedUrls.length === 1 && (
+            <p className="text-ink-faint text-xs mb-4">
+              Your page:{" "}
+              <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                {verifyUrl}
+              </a>
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep("search")} className="btn-secondary text-sm">
+              Back
+            </button>
+            <button onClick={handleVerify} disabled={verifying} className="btn-primary text-sm flex-1">
+              {verifying ? "Checking..." : "I've added the code — verify"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Claim */}
+      {step === "claim" && selectedArtist && (
+        <div className="card">
+          <div className="section-label mb-4">Claim your profile</div>
           <div className="space-y-2 mb-6 text-sm">
             <div className="flex justify-between">
               <span className="text-ink-faint">Artist</span>
@@ -214,84 +323,54 @@ export default function ClaimPage() {
             </div>
           </div>
 
-          <button onClick={handleClaim} className="btn-primary w-full text-sm" disabled={!!claimHash}>
-            {claimHash ? "Confirming on-chain..." : "Claim profile"}
-          </button>
-
-          <button onClick={() => setStep("search")} className="btn-secondary w-full text-sm mt-2">
-            Back
-          </button>
+          {!claimConfirmed ? (
+            <button onClick={handleClaim} className="btn-primary w-full text-sm" disabled={!!claimHash}>
+              {claimHash ? "Confirming on-chain..." : "Claim profile"}
+            </button>
+          ) : (
+            <button onClick={handleRelease} className="btn-primary w-full text-sm">
+              Verify and release funds
+            </button>
+          )}
         </div>
       )}
 
-      {/* Step 3: Awaiting attestor verification */}
-      {currentStep === "verify" && selectedArtist && (
-        <div className="card">
-          <div className="section-label mb-4">Awaiting verification</div>
-
-          <p className="text-ink-light text-sm mb-4">
-            Your profile is claimed. Now add this verification challenge to your
-            website or Bandcamp so independent attestors can confirm you're the real artist.
-          </p>
-
-          {verificationChallenge && (
-            <div className="mb-4">
-              <label className="text-ink-faint text-xs block mb-1">
-                Your on-chain verification challenge:
-              </label>
-              <div className="bg-paper-dark border border-rule p-3 font-mono text-xs text-accent text-center select-all break-all">
-                {verificationChallenge}
-              </div>
-            </div>
-          )}
-
-          <p className="text-ink-faint text-xs mb-4">
-            Place this code somewhere publicly visible on your linked website (e.g. in
-            a meta tag, about section, or page footer). Attestors will independently
-            check your site and submit on-chain attestations.
-          </p>
-
-          <div className="bg-paper-dark border border-rule p-3 mb-4 text-sm">
-            <div className="flex justify-between mb-1">
-              <span className="text-ink-faint">Attestations</span>
-              <span className="font-mono">
-                {currentAttestations?.toString() ?? "0"} / {threshold?.toString() ?? "?"}
-              </span>
-            </div>
-            <div className="w-full bg-rule h-1.5 mt-1">
-              <div
-                className="bg-accent h-1.5 transition-all"
-                style={{
-                  width: `${
-                    threshold
-                      ? Math.min(100, (Number(currentAttestations ?? 0) / Number(threshold)) * 100)
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-
-          <button onClick={handleCheckStatus} className="btn-primary w-full text-sm">
-            Check verification status
-          </button>
+      {/* Step 3.5: Releasing */}
+      {step === "releasing" && (
+        <div className="card py-8">
+          <div className="text-ink-light text-sm mb-1">Verifying on-chain...</div>
+          <p className="text-ink-faint text-xs">The relayer is calling verifyAndRelease. This may take a moment.</p>
         </div>
       )}
 
       {/* Step 4: Done */}
-      {currentStep === "done" && selectedArtist && (
+      {step === "done" && selectedArtist && (
         <div className="card py-8">
-          <div className="section-label mb-3">Verified</div>
-          <h2 className="text-xl font-bold mb-2">Profile verified.</h2>
+          <div className="section-label mb-3">Claimed</div>
+          <h2 className="text-xl font-bold mb-2">Profile claimed.</h2>
           <p className="text-ink-light text-sm mb-2">
             You're now registered as{" "}
             <span className="text-accent font-mono">
               {formatENSName(artistToSubname(selectedArtist.name))}
             </span>
           </p>
+          {releaseResult?.unclaimedReleased && releaseResult.unclaimedReleased !== "0" && (
+            <p className="text-accent font-mono font-medium text-sm mb-2">
+              ${formatUSDC(BigInt(releaseResult.unclaimedReleased))} USDC released to your wallet.
+            </p>
+          )}
+          {releaseResult?.txHash && (
+            <a
+              href={`https://testnet.arcscan.app/tx/${releaseResult.txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent text-xs hover:underline"
+            >
+              View transaction
+            </a>
+          )}
           <p className="text-ink-faint text-xs mt-4 mb-6">
             Future tips from listeners will be sent directly to your wallet.
-            Escrowed funds have been released automatically.
           </p>
           <a
             href={`/artist/${selectedArtist.id}`}
