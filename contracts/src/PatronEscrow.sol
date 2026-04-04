@@ -22,8 +22,8 @@ contract PatronEscrow is Ownable {
     // Total tipped per listener
     mapping(address => uint256) public totalTipped;
 
-    // Tip amount (default 0.05 USDC = 50000 in 6 decimals)
-    uint256 public defaultTipAmount = 50000;
+    // Tip amount (default 0.01 USDC = 10000 in 6 decimals)
+    uint256 public defaultTipAmount = 10000;
 
     // Events
     event Deposited(address indexed listener, uint256 amount);

@@ -40,7 +40,7 @@ Built at ETHGlobal Cannes 2025.
 ### Listener (2 min setup)
 1. Connect wallet → Verify with World ID → Deposit USDC
 2. Install Chrome extension
-3. Play music → Extension auto-detects → $0.05 USDC sent per track
+3. Play music → Extension auto-detects → $0.01 USDC sent per track
 
 ### Artist Claim
 1. Search for your artist name (MusicBrainz lookup)
@@ -90,7 +90,7 @@ patron/
 ### PatronEscrow.sol
 - `deposit(amount)` — Listener deposits USDC
 - `tip(mbidHash, amount)` — Send tip to artist (direct if verified, escrow if not)
-- `tipDefault(mbidHash)` — Tip using default amount ($0.05)
+- `tipDefault(mbidHash)` — Tip using default amount ($0.01)
 - `claimArtist(mbidHash)` — Artist claims their profile
 - `verifyAndRelease(mbidHash)` — Owner verifies + releases escrowed funds
 - `withdraw(amount)` — Listener withdraws unused balance
@@ -140,7 +140,7 @@ NEXT_PUBLIC_WORLD_APP_ID=app_your_app_id
 NEXT_PUBLIC_PATRON_ESCROW_ADDRESS=0x...
 NEXT_PUBLIC_PATRON_REGISTRY_ADDRESS=0x...
 NEXT_PUBLIC_USDC_ADDRESS=0x...
-NEXT_PUBLIC_CHAIN_ID=1637450
+NEXT_PUBLIC_CHAIN_ID=5042002
 ```
 
 ## Prize Categories

@@ -58,11 +58,11 @@ contract PatronEscrowTest is Test {
         escrow.deposit(10e6);
 
         vm.prank(listener);
-        escrow.tip(mbidHash, 50000); // $0.05
+        escrow.tip(mbidHash, 10000); // $0.01
 
-        assertEq(escrow.listenerBalance(listener), 10e6 - 50000);
-        assertEq(escrow.unclaimedBalance(mbidHash), 50000);
-        assertEq(escrow.totalTipped(listener), 50000);
+        assertEq(escrow.listenerBalance(listener), 10e6 - 10000);
+        assertEq(escrow.unclaimedBalance(mbidHash), 10000);
+        assertEq(escrow.totalTipped(listener), 10000);
     }
 
     function testTipVerifiedArtist() public {
@@ -76,10 +76,10 @@ contract PatronEscrowTest is Test {
         escrow.deposit(10e6);
 
         vm.prank(listener);
-        escrow.tip(mbidHash, 50000);
+        escrow.tip(mbidHash, 10000);
 
         // Tip should go directly to artist
-        assertEq(usdc.balanceOf(artist), 50000);
+        assertEq(usdc.balanceOf(artist), 10000);
         assertEq(escrow.unclaimedBalance(mbidHash), 0);
     }
 
@@ -90,14 +90,14 @@ contract PatronEscrowTest is Test {
         vm.prank(listener);
         escrow.tipDefault(mbidHash);
 
-        assertEq(escrow.unclaimedBalance(mbidHash), 50000); // default tip amount
-        assertEq(escrow.totalTipped(listener), 50000);
+        assertEq(escrow.unclaimedBalance(mbidHash), 10000); // default tip amount
+        assertEq(escrow.totalTipped(listener), 10000);
     }
 
     function testTipInsufficientBalance() public {
         vm.prank(listener);
         vm.expectRevert("Insufficient balance");
-        escrow.tip(mbidHash, 50000);
+        escrow.tip(mbidHash, 10000);
     }
 
     function testClaimArtist() public {

@@ -8,5 +8,5 @@ solc = "0.8.20"
 line_length = 100
 
 [rpc_endpoints]
-arc_testnet = "${ARC_TESTNET_RPC_URL}"
+arc_testnet = "https://rpc.testnet.arc.network"
 base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
