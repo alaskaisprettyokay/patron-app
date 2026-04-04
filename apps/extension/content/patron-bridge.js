@@ -44,6 +44,20 @@ window.addEventListener("message", (event) => {
     sendStatusToPage();
   }
 
+  // Setup flow: dashboard can trigger setup completion
+  if (event.data?.type === "PATRON_COMPLETE_SETUP") {
+    chrome.runtime.sendMessage(
+      { type: "COMPLETE_SETUP", data: event.data.data },
+      (result) => {
+        if (chrome.runtime.lastError) return;
+        window.postMessage({ type: "PATRON_SETUP_RESULT", result }, "*");
+        // Refresh wallet info after setup
+        sendWalletToPage();
+      }
+    );
+  }
+
+  // Deprecated: kept for backward compatibility during migration
   if (event.data?.type === "PATRON_APPROVE_AND_DEPOSIT") {
     chrome.runtime.sendMessage({ type: "APPROVE_AND_DEPOSIT" }, (result) => {
       if (chrome.runtime.lastError) return;

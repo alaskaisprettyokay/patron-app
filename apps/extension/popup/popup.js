@@ -1,4 +1,5 @@
 // Patron Popup — receipt-style wallet + scrobble state + history
+// Now supports session key setup flow
 
 const platformNames = {
   spotify: "Spotify",
@@ -18,10 +19,15 @@ function renderWallet() {
       return;
     }
 
+    if (!info.setupComplete) {
+      renderSetupFlow(section, info);
+      return;
+    }
+
     if (info.error) {
       section.innerHTML = `
         <div class="wallet-row">
-          <span class="wallet-label">Wallet</span>
+          <span class="wallet-label">Account</span>
           <span class="wallet-addr">${shortAddr(info.address)}</span>
         </div>
         <div class="wallet-error">Network error</div>
@@ -29,72 +35,161 @@ function renderWallet() {
       return;
     }
 
-    const funded = parseFloat(info.escrowBalance) > 0;
-    const hasUsdc = parseFloat(info.usdcBalance) > 0;
+    renderActiveWallet(section, info);
+  });
+}
 
+function renderSetupFlow(section, info) {
+  if (!info.sessionAddress) {
+    // No session key yet — generate one
     section.innerHTML = `
-      <div class="label">Wallet</div>
-      <div class="wallet-row">
-        <span class="wallet-label">Address</span>
-        <span class="wallet-addr" id="wallet-addr" title="${info.address}">${shortAddr(info.address)}</span>
-      </div>
-      <div class="wallet-row">
-        <span class="wallet-label">USDC</span>
-        <span class="wallet-val">$${info.usdcBalance}</span>
-      </div>
-      <div class="wallet-row">
-        <span class="wallet-label">Tip balance</span>
-        <span class="wallet-val ${funded ? 'funded' : 'empty'}">$${info.escrowBalance}</span>
-      </div>
-      ${!funded && hasUsdc ? `
-        <button id="deposit-btn" class="wallet-btn">Deposit $${info.usdcBalance}</button>
-      ` : ""}
-      ${!funded && !hasUsdc ? `
-        <div class="wallet-fund">
-          <div class="fund-label">Send USDC (Arc Testnet) to:</div>
-          <div class="fund-addr" id="fund-addr">${info.address}</div>
-          <button id="copy-addr-btn" class="wallet-btn-sm">Copy address</button>
-        </div>
-      ` : ""}
-      ${funded ? `
-        <div class="wallet-ready">Ready to auto-tip</div>
-      ` : ""}
+      <div class="label">Setup</div>
+      <button id="gen-session-btn" class="wallet-btn">Generate session key</button>
     `;
-
-    // Copy address
-    document.getElementById("copy-addr-btn")?.addEventListener("click", () => {
-      navigator.clipboard.writeText(info.address);
-      document.getElementById("copy-addr-btn").textContent = "Copied";
-      setTimeout(() => {
-        const btn = document.getElementById("copy-addr-btn");
-        if (btn) btn.textContent = "Copy address";
-      }, 2000);
+    document.getElementById("gen-session-btn")?.addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "INIT_SESSION_KEY" }, () => renderWallet());
     });
+    return;
+  }
 
-    // Copy on click wallet addr
-    document.getElementById("wallet-addr")?.addEventListener("click", () => {
-      navigator.clipboard.writeText(info.address);
-    });
+  // Session key exists, need user to authorize it from their main wallet
+  section.innerHTML = `
+    <div class="label">Setup</div>
+    <div style="font-size: 10px; color: #78716c; margin-bottom: 8px;">
+      Connect your wallet to authorize this extension.
+    </div>
+    <div class="wallet-row">
+      <span class="wallet-label">Session key</span>
+      <span class="wallet-addr" id="session-addr" title="${info.sessionAddress}">${shortAddr(info.sessionAddress)}</span>
+    </div>
+    <div style="margin-top: 10px;">
+      <div class="fund-label">Your wallet address</div>
+      <input type="text" id="owner-input" placeholder="0x..." style="
+        width: 100%; font-family: inherit; font-size: 10px; padding: 6px;
+        border: 1px solid #c4bcb0; background: #ebe4d8; color: #1c1917;
+        box-sizing: border-box;
+      ">
+    </div>
+    <div style="margin-top: 6px;">
+      <div class="fund-label">PatronAccount address</div>
+      <input type="text" id="account-input" placeholder="0x..." style="
+        width: 100%; font-family: inherit; font-size: 10px; padding: 6px;
+        border: 1px solid #c4bcb0; background: #ebe4d8; color: #1c1917;
+        box-sizing: border-box;
+      ">
+    </div>
+    <div style="font-size: 9px; color: #a8a29e; margin-top: 6px; line-height: 1.5;">
+      1. Deploy a PatronAccount (or use factory)<br>
+      2. Call <strong>authorizeSession</strong> with the session key above<br>
+      3. Enter your addresses and connect
+    </div>
+    <button id="connect-btn" class="wallet-btn">Connect</button>
+    <div id="setup-error" class="wallet-error" style="margin-top: 4px;"></div>
+  `;
 
-    // Deposit button
-    document.getElementById("deposit-btn")?.addEventListener("click", () => {
-      const btn = document.getElementById("deposit-btn");
-      btn.textContent = "Approving + depositing...";
-      btn.disabled = true;
-      chrome.runtime.sendMessage({ type: "APPROVE_AND_DEPOSIT" }, (result) => {
+  document.getElementById("session-addr")?.addEventListener("click", () => {
+    navigator.clipboard.writeText(info.sessionAddress);
+  });
+
+  document.getElementById("connect-btn")?.addEventListener("click", () => {
+    const accountAddr = document.getElementById("account-input").value.trim();
+    const ownerAddr = document.getElementById("owner-input").value.trim();
+    const errorEl = document.getElementById("setup-error");
+    const btn = document.getElementById("connect-btn");
+
+    if (!accountAddr || !ownerAddr) {
+      errorEl.textContent = "Both addresses required";
+      return;
+    }
+    if (!accountAddr.startsWith("0x") || !ownerAddr.startsWith("0x")) {
+      errorEl.textContent = "Invalid address format";
+      return;
+    }
+
+    btn.textContent = "Verifying...";
+    btn.disabled = true;
+    errorEl.textContent = "";
+
+    chrome.runtime.sendMessage(
+      { type: "COMPLETE_SETUP", data: { accountAddress: accountAddr, ownerAddress: ownerAddr } },
+      (result) => {
         if (result?.error) {
-          btn.textContent = `Error: ${result.error}`;
+          errorEl.textContent = result.error;
+          btn.textContent = "Connect";
           btn.disabled = false;
         } else {
           renderWallet();
         }
-      });
-    });
+      }
+    );
+  });
+}
+
+function renderActiveWallet(section, info) {
+  const funded = parseFloat(info.escrowBalance) > 0;
+  const sessionActive = info.session?.active && !info.session?.expired;
+  const budgetLow = parseFloat(info.session?.remainingBudget || "0") < 0.10;
+
+  section.innerHTML = `
+    <div class="label">Account</div>
+    <div class="wallet-row">
+      <span class="wallet-label">PatronAccount</span>
+      <span class="wallet-addr" id="wallet-addr" title="${info.address}">${shortAddr(info.address)}</span>
+    </div>
+    <div class="wallet-row">
+      <span class="wallet-label">Tip balance</span>
+      <span class="wallet-val ${funded ? 'funded' : 'empty'}">$${info.escrowBalance}</span>
+    </div>
+    <div class="wallet-row">
+      <span class="wallet-label">Session</span>
+      <span class="wallet-val" style="color: ${sessionActive ? '#2ed573' : '#b84a32'};">
+        ${sessionActive ? 'Active' : (info.session?.expired ? 'Expired' : 'Revoked')}
+      </span>
+    </div>
+    ${sessionActive ? `
+      <div class="wallet-row">
+        <span class="wallet-label">Budget left today</span>
+        <span class="wallet-val ${budgetLow ? 'empty' : ''}" >$${info.session.remainingBudget}</span>
+      </div>
+    ` : ''}
+    ${!funded ? `
+      <div class="wallet-fund">
+        <div class="fund-label">Deposit USDC via your main wallet</div>
+        <div class="fund-addr" id="fund-addr">${info.address}</div>
+        <button id="copy-addr-btn" class="wallet-btn-sm">Copy account address</button>
+      </div>
+    ` : ''}
+    ${funded && sessionActive ? `
+      <div class="wallet-ready">Ready to auto-tip</div>
+    ` : ''}
+    ${!sessionActive ? `
+      <div style="font-size: 9px; color: #a8a29e; margin-top: 6px;">
+        Re-authorize session key from your main wallet to resume tipping.
+      </div>
+      <button id="reset-btn" class="wallet-btn-sm">Reset and re-setup</button>
+    ` : ''}
+  `;
+
+  document.getElementById("copy-addr-btn")?.addEventListener("click", () => {
+    navigator.clipboard.writeText(info.address);
+    document.getElementById("copy-addr-btn").textContent = "Copied";
+    setTimeout(() => {
+      const btn = document.getElementById("copy-addr-btn");
+      if (btn) btn.textContent = "Copy account address";
+    }, 2000);
+  });
+
+  document.getElementById("wallet-addr")?.addEventListener("click", () => {
+    navigator.clipboard.writeText(info.address);
+  });
+
+  document.getElementById("reset-btn")?.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "RESET_WALLET" }, () => renderWallet());
   });
 }
 
 function shortAddr(addr) {
-  if (!addr) return "—";
+  if (!addr) return "\u2014";
   return addr.slice(0, 6) + "..." + addr.slice(-4);
 }
 
@@ -111,7 +206,7 @@ function update() {
     document.getElementById("tip-count").textContent = `${tipCount}`;
 
     if (scrobble?.artist) {
-      document.getElementById("track-name").textContent = scrobble.track || "—";
+      document.getElementById("track-name").textContent = scrobble.track || "\u2014";
       document.getElementById("artist-name").textContent = scrobble.artist;
       document.getElementById("empty-state").style.display = "none";
 
@@ -170,7 +265,7 @@ function update() {
       progressFill.style.width = "0%";
       tipResult.style.display = "block";
       tipResult.className = "tip-result escrowed";
-      tipResult.textContent = "Skipped — no tip";
+      tipResult.textContent = "Skipped \u2014 no tip";
     } else {
       progressContainer.style.display = "none";
       tipResult.style.display = "none";
@@ -188,7 +283,7 @@ function update() {
         <div class="history-item">
           <div>
             <div class="track">${tip.artist}</div>
-            <div class="artist">${tip.track} · ${platformNames[tip.platform] || tip.platform}</div>
+            <div class="artist">${tip.track} \u00B7 ${platformNames[tip.platform] || tip.platform}</div>
           </div>
           <div class="amount">
             ${tip.txHash ? `<a href="https://testnet.arcscan.app/tx/${tip.txHash}" target="_blank">$${tip.amount.toFixed(2)}</a>` : '$' + tip.amount.toFixed(2)}

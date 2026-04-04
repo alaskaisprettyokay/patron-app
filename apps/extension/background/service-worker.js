@@ -15,12 +15,12 @@ let scrobbleState = {
   threshold: 10000,
 };
 
-// Initialize wallet on startup
-PatronWallet.initWallet().then((info) => {
-  console.log(`[Patron] Wallet ready: ${info.address}${info.isNew ? " (new)" : ""}`);
+// Initialize session key on startup
+PatronWallet.initSessionKey().then((info) => {
+  console.log(`[Patron] Session key ready: ${info.sessionAddress}${info.isNew ? " (new)" : ""}`);
 });
 
-// Listen for messages from content scripts
+// Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const { type, data } = message;
 
@@ -79,8 +79,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       PatronWallet.getWalletInfo().then(sendResponse);
       return true;
 
+    case "INIT_SESSION_KEY":
+      PatronWallet.initSessionKey().then(sendResponse);
+      return true;
+
+    case "COMPLETE_SETUP":
+      PatronWallet.completeSetup(data.accountAddress, data.ownerAddress)
+        .then((result) => sendResponse({ success: true, ...result }))
+        .catch((err) => sendResponse({ error: err.message }));
+      return true;
+
+    case "PREDICT_ACCOUNT":
+      PatronWallet.predictAccountAddress(data.ownerAddress)
+        .then((address) => sendResponse({ address }))
+        .catch((err) => sendResponse({ error: err.message }));
+      return true;
+
+    case "RESET_WALLET":
+      PatronWallet.resetWallet().then(sendResponse);
+      return true;
+
+    // Deprecated: kept for bridge compatibility during migration
     case "INIT_WALLET":
-      PatronWallet.initWallet().then(sendResponse);
+      PatronWallet.initSessionKey().then(sendResponse);
       return true;
 
     case "APPROVE_AND_DEPOSIT":
@@ -124,7 +145,7 @@ async function handleScrobbleComplete({ artist, track, platform }) {
     const data = await res.json();
 
     if (data.artist?.mbidHash) {
-      // Send tip on-chain
+      // Send tip via session key → PatronAccount → Escrow
       try {
         const tipResult = await PatronWallet.sendTip(data.artist.mbidHash);
         console.log(`[Patron] On-chain tip tx: ${tipResult.txHash}`);
