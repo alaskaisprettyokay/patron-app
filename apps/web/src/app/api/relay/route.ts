@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWalletClient, http, createPublicClient, keccak256, toBytes } from "viem";
+import { createWalletClient, http, createPublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { PATRON_ESCROW_ABI } from "@/lib/contracts";
 

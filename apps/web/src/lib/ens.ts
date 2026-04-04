@@ -1,5 +1,3 @@
-import { type Address } from "viem";
-
 export function artistToSubname(artistName: string): string {
   return artistName
     .toLowerCase()
@@ -11,8 +9,4 @@ export function artistToSubname(artistName: string): string {
 
 export function formatENSName(subname: string): string {
   return `${subname}.patron.eth`;
-}
-
-export function formatArtistENS(artistName: string): string {
-  return formatENSName(artistToSubname(artistName));
 }
