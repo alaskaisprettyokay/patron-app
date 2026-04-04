@@ -2,18 +2,18 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { useReadContract, usePublicClient } from "wagmi";
+import { useReadContract, usePublicClient, useChainId } from "wagmi";
 import { getArtistDetails, getArtistUrls, type MBArtistDetails } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
 import { REGISTRY_ADDRESS, ONDA_REGISTRY_ABI } from "@/lib/contracts";
 import { formatENSName } from "@/lib/ens";
 import { parseAbiItem, formatUnits } from "viem";
 
-interface OnChainGift {
+interface GiftLog {
   listener: string;
   amount: bigint;
-  blockNumber: bigint;
   txHash: string;
+  blockNumber: bigint;
   timestamp?: number;
 }
 
@@ -32,16 +32,21 @@ function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
+const TIPPED_EVENT = parseAbiItem(
+  "event Tipped(address indexed listener, bytes32 indexed mbidHash, uint256 amount)"
+);
+
 export default function ArtistPage() {
   const params = useParams();
   const mbid = params.mbid as string;
   const mbidHash = mbidToBytes32(mbid);
   const publicClient = usePublicClient();
+  const chainId = useChainId();
 
   const [artist, setArtist] = useState<MBArtistDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [onChainGifts, setOnChainGifts] = useState<OnChainGift[]>([]);
+  const [giftLogs, setGiftLogs] = useState<GiftLog[]>([]);
   const [giftsLoading, setGiftsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -55,56 +60,84 @@ export default function ArtistPage() {
       .finally(() => setLoading(false));
   }, [mbid]);
 
-  // Fetch on-chain Tipped events for this artist
+  // Fetch on-chain Tipped events client-side
   useEffect(() => {
-    if (!publicClient) return;
+    if (!publicClient) {
+      console.log("[onda] waiting for public client...");
+      return;
+    }
+
+    let cancelled = false;
 
     async function fetchGiftLogs() {
       try {
-        const logs = await publicClient!.getLogs({
-          address: ESCROW_ADDRESS,
-          event: parseAbiItem(
-            "event Tipped(address indexed listener, bytes32 indexed mbidHash, uint256 amount)"
-          ),
-          args: { mbidHash: mbidHash as `0x${string}` },
-          fromBlock: 0n,
-          toBlock: "latest",
-        });
+        console.log("[onda] fetching Tipped logs for", mbid, "on chain", chainId);
 
-        // Get block timestamps for recent logs (last 20)
-        const recentLogs = logs.slice(-20);
-        const gifts: OnChainGift[] = [];
-
-        for (const log of recentLogs) {
-          let timestamp: number | undefined;
-          try {
-            const block = await publicClient!.getBlock({
-              blockNumber: log.blockNumber!,
-            });
-            timestamp = Number(block.timestamp) * 1000;
-          } catch {
-            // skip timestamp if fetch fails
-          }
-
-          gifts.push({
-            listener: log.args.listener as string,
-            amount: log.args.amount as bigint,
-            blockNumber: log.blockNumber!,
-            txHash: log.transactionHash!,
-            timestamp,
+        // Try fetching from block 0; if that fails, try last N blocks
+        let logs;
+        try {
+          logs = await publicClient!.getLogs({
+            address: ESCROW_ADDRESS,
+            event: TIPPED_EVENT,
+            args: { mbidHash: mbidHash as `0x${string}` },
+            fromBlock: 0n,
+            toBlock: "latest",
+          });
+        } catch (err) {
+          console.warn("[onda] full range getLogs failed, trying recent blocks:", err);
+          const currentBlock = await publicClient!.getBlockNumber();
+          logs = await publicClient!.getLogs({
+            address: ESCROW_ADDRESS,
+            event: TIPPED_EVENT,
+            args: { mbidHash: mbidHash as `0x${string}` },
+            fromBlock: currentBlock > 50000n ? currentBlock - 50000n : 0n,
+            toBlock: "latest",
           });
         }
 
-        setOnChainGifts(gifts.reverse()); // newest first
+        if (cancelled) return;
+        console.log("[onda] found", logs.length, "Tipped events");
+
+        // Get block timestamps for the logs (batch to avoid too many RPC calls)
+        const uniqueBlocks = [...new Set(logs.map((l) => l.blockNumber!))];
+        const blockTimestamps = new Map<bigint, number>();
+
+        // Fetch timestamps in parallel, max 10 at a time
+        for (let i = 0; i < uniqueBlocks.length; i += 10) {
+          const batch = uniqueBlocks.slice(i, i + 10);
+          const results = await Promise.allSettled(
+            batch.map((bn) => publicClient!.getBlock({ blockNumber: bn }))
+          );
+          results.forEach((r, idx) => {
+            if (r.status === "fulfilled") {
+              blockTimestamps.set(batch[idx], Number(r.value.timestamp) * 1000);
+            }
+          });
+        }
+
+        if (cancelled) return;
+
+        const gifts: GiftLog[] = logs.map((log) => ({
+          listener: log.args.listener as string,
+          amount: log.args.amount as bigint,
+          blockNumber: log.blockNumber!,
+          txHash: log.transactionHash!,
+          timestamp: blockTimestamps.get(log.blockNumber!),
+        }));
+
+        // newest first
+        gifts.reverse();
+        setGiftLogs(gifts);
       } catch (err) {
-        console.error("Failed to fetch gift logs:", err);
+        console.error("[onda] failed to fetch gift logs:", err);
       } finally {
-        setGiftsLoading(false);
+        if (!cancelled) setGiftsLoading(false);
       }
     }
 
     fetchGiftLogs();
-  }, [publicClient, mbidHash]);
+    return () => { cancelled = true; };
+  }, [publicClient, mbidHash, chainId, mbid]);
 
   const { data: artistInfo } = useReadContract({
     address: ESCROW_ADDRESS,
@@ -126,18 +159,18 @@ export default function ArtistPage() {
     functionName: "defaultTipAmount",
   });
 
-  // Derived stats from on-chain data
   const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
   const tipSize = (defaultTipAmount as bigint) || 10000n;
   const onChainGiftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
+  const giftCount = Math.max(onChainGiftCount, giftLogs.length);
 
   const uniqueSupporters = useMemo(() => {
-    const addrs = new Set(onChainGifts.map((g) => g.listener));
+    const addrs = new Set(giftLogs.map((g) => g.listener.toLowerCase()));
     return addrs.size;
-  }, [onChainGifts]);
+  }, [giftLogs]);
 
   const activityDays = useMemo(() => {
-    const giftsWithTime = onChainGifts.filter((g) => g.timestamp);
+    const giftsWithTime = giftLogs.filter((g) => g.timestamp);
     const now = new Date();
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -155,7 +188,7 @@ export default function ArtistPage() {
       });
     }
     return days;
-  }, [onChainGifts]);
+  }, [giftLogs]);
 
   const maxDayCount = Math.max(...activityDays.map((d) => d.count), 1);
 
@@ -231,23 +264,27 @@ export default function ArtistPage() {
       {/* Stats row */}
       <div className="grid sm:grid-cols-3 gap-6 mb-12">
         <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">{onChainGiftCount}</div>
+          <div className="font-mono text-2xl font-bold">{giftCount}</div>
           <div className="text-sm text-ink-light">total gifts</div>
         </div>
         <div className="border-l-2 border-ink pl-4">
-          <div className="font-mono text-2xl font-bold">{uniqueSupporters}</div>
+          <div className="font-mono text-2xl font-bold">
+            {giftsLoading ? "..." : uniqueSupporters}
+          </div>
           <div className="text-sm text-ink-light">supporters</div>
         </div>
         <div className="border-l-2 border-ink pl-4">
           <div className="font-mono text-2xl font-bold">
-            ${onChainGiftCount > 0 ? (onChainGiftCount * 0.01).toFixed(2) : "0.00"}
+            {giftCount > 0
+              ? `$${(Number(formatUSDC(unclaimed as bigint)) / giftCount).toFixed(2)}`
+              : "—"}
           </div>
-          <div className="text-sm text-ink-light">per gift avg</div>
+          <div className="text-sm text-ink-light">per gift</div>
         </div>
       </div>
 
       {/* Activity chart */}
-      {onChainGifts.some((g) => g.timestamp) && (
+      {giftLogs.some((g) => g.timestamp) && (
         <div className="mb-12">
           <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">activity</h2>
           <div className="flex items-end gap-2 h-24">
@@ -283,11 +320,11 @@ export default function ArtistPage() {
       )}
 
       {/* Recent gifts from on-chain events */}
-      {onChainGifts.length > 0 && (
+      {giftLogs.length > 0 && (
         <div className="mb-12">
           <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">recent gifts</h2>
           <div>
-            {onChainGifts.slice(0, 15).map((gift, i) => (
+            {giftLogs.slice(0, 15).map((gift, i) => (
               <div
                 key={`${gift.txHash}-${i}`}
                 className="flex items-baseline justify-between py-3 border-b border-rule last:border-0"
@@ -316,7 +353,7 @@ export default function ArtistPage() {
         </div>
       )}
 
-      {giftsLoading && onChainGifts.length === 0 && (
+      {giftsLoading && (
         <div className="mb-12 text-ink-faint text-sm">loading gift history...</div>
       )}
 
