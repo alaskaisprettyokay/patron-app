@@ -1,4 +1,4 @@
-import { type Address, type Hash, parseUnits, formatUnits, keccak256, toBytes } from "viem";
+import { type Address, formatUnits, keccak256, toBytes } from "viem";
 
 // Contract ABIs (simplified for key functions)
 export const PATRON_ESCROW_ABI = [
@@ -198,10 +198,6 @@ export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS ||
 // Helpers
 export function mbidToBytes32(mbid: string): `0x${string}` {
   return keccak256(toBytes(mbid));
-}
-
-export function parseUSDC(amount: string | number): bigint {
-  return parseUnits(String(amount), 6);
 }
 
 export function formatUSDC(amount: bigint): string {

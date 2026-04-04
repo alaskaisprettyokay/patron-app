@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract } from "wagmi";
-import { type Address } from "viem";
+import type { Address } from "viem";
 import { ESCROW_ADDRESS, PATRON_ESCROW_ABI, formatUSDC } from "@/lib/contracts";
 import { FundExtension } from "@/components/FundExtension";
 import { TipFeed } from "@/components/TipFeed";

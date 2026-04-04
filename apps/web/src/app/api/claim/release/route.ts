@@ -3,7 +3,6 @@ import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
 import { ESCROW_ADDRESS, PATRON_ESCROW_ABI } from "@/lib/contracts";
-import { verifiedMbids } from "@/lib/verified-store";
 
 export async function POST(request: NextRequest) {
   try {

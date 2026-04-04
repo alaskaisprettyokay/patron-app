@@ -1,17 +1,5 @@
 // Patron Popup — receipt-style wallet + scrobble state + history
 
-const statusLabels = {
-  idle: "Waiting for music...",
-  listening: "Listening...",
-  scrobbled: "Scrobbled",
-  tipped: "Tipped on-chain",
-  tip_failed: "Tip failed",
-  paused: "Paused",
-  skipped: "Skipped",
-  lookup_failed: "Artist not found",
-  error: "Error",
-};
-
 const platformNames = {
   spotify: "Spotify",
   soundcloud: "SoundCloud",
