@@ -100,6 +100,41 @@ export const PATRON_ESCROW_ABI = [
     inputs: [{ name: "mbidHash", type: "bytes32" }],
     outputs: [],
   },
+  {
+    name: "getVerificationChallenge",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "mbidHash", type: "bytes32" }],
+    outputs: [{ name: "", type: "bytes32" }],
+  },
+  {
+    name: "attestVerification",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "mbidHash", type: "bytes32" }],
+    outputs: [],
+  },
+  {
+    name: "attestationCount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "bytes32" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "attestationThreshold",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "isAttestor",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
 ] as const;
 
 export const PATRON_REGISTRY_ABI = [

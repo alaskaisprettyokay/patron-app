@@ -22,6 +22,15 @@ contract PatronEscrow is Ownable {
     // Total tipped per listener
     mapping(address => uint256) public totalTipped;
 
+    // --- Decentralized attestor system ---
+    mapping(address => bool) public isAttestor;
+    uint256 public attestorCount;
+    uint256 public attestationThreshold;
+
+    // attestations[mbidHash][attestor] = true
+    mapping(bytes32 => mapping(address => bool)) public hasAttested;
+    mapping(bytes32 => uint256) public attestationCount;
+
     // Tip amount (default 0.01 USDC = 10000 in 6 decimals)
     uint256 public defaultTipAmount = 10000;
 
@@ -31,10 +40,37 @@ contract PatronEscrow is Ownable {
     event Tipped(address indexed listener, bytes32 indexed mbidHash, uint256 amount);
     event ArtistClaimed(bytes32 indexed mbidHash, address indexed wallet);
     event ArtistVerified(bytes32 indexed mbidHash, address indexed wallet);
+    event AttestorAdded(address indexed attestor);
+    event AttestorRemoved(address indexed attestor);
+    event AttestationSubmitted(bytes32 indexed mbidHash, address indexed attestor, uint256 count);
 
     constructor(address _usdc) Ownable(msg.sender) {
         usdc = IERC20(_usdc);
+        attestationThreshold = 1; // Default: 1 attestation needed
     }
+
+    // --- Attestor management (owner only) ---
+
+    function addAttestor(address attestor) external onlyOwner {
+        require(!isAttestor[attestor], "Already attestor");
+        isAttestor[attestor] = true;
+        attestorCount++;
+        emit AttestorAdded(attestor);
+    }
+
+    function removeAttestor(address attestor) external onlyOwner {
+        require(isAttestor[attestor], "Not attestor");
+        isAttestor[attestor] = false;
+        attestorCount--;
+        emit AttestorRemoved(attestor);
+    }
+
+    function setAttestationThreshold(uint256 threshold) external onlyOwner {
+        require(threshold > 0, "Threshold must be > 0");
+        attestationThreshold = threshold;
+    }
+
+    // --- Listener functions ---
 
     function deposit(uint256 amount) external {
         require(amount > 0, "Amount must be > 0");
@@ -82,15 +118,57 @@ contract PatronEscrow is Ownable {
         emit Tipped(msg.sender, mbidHash, amount);
     }
 
+    // --- Artist claim & verification ---
+
     function claimArtist(bytes32 mbidHash) external {
         require(artistWallet[mbidHash] == address(0), "Already claimed");
         artistWallet[mbidHash] = msg.sender;
         emit ArtistClaimed(mbidHash, msg.sender);
     }
 
-    // Called by owner after off-chain verification
+    /**
+     * @notice Returns the verification challenge for a claimed artist.
+     * The artist must place this hex string on their linked website
+     * so attestors can independently verify ownership.
+     */
+    function getVerificationChallenge(bytes32 mbidHash) external view returns (bytes32) {
+        require(artistWallet[mbidHash] != address(0), "Not claimed");
+        return keccak256(abi.encodePacked(mbidHash, artistWallet[mbidHash], "patron-verify"));
+    }
+
+    /**
+     * @notice Attestors call this after independently verifying the artist placed
+     * the challenge on their website. When threshold is met, artist is auto-verified
+     * and escrowed funds are released.
+     */
+    function attestVerification(bytes32 mbidHash) external {
+        require(isAttestor[msg.sender], "Not an attestor");
+        require(artistWallet[mbidHash] != address(0), "Not claimed");
+        require(!isVerified[mbidHash], "Already verified");
+        require(!hasAttested[mbidHash][msg.sender], "Already attested");
+
+        hasAttested[mbidHash][msg.sender] = true;
+        attestationCount[mbidHash]++;
+
+        emit AttestationSubmitted(mbidHash, msg.sender, attestationCount[mbidHash]);
+
+        // Auto-verify when threshold is met
+        if (attestationCount[mbidHash] >= attestationThreshold) {
+            _verifyAndRelease(mbidHash);
+        }
+    }
+
+    /**
+     * @notice Owner can still directly verify (backwards compatible).
+     * Useful for bootstrapping before attestors are onboarded.
+     */
     function verifyAndRelease(bytes32 mbidHash) external onlyOwner {
         require(artistWallet[mbidHash] != address(0), "Not claimed");
+        _verifyAndRelease(mbidHash);
+    }
+
+    function _verifyAndRelease(bytes32 mbidHash) internal {
+        if (isVerified[mbidHash]) return; // idempotent
         isVerified[mbidHash] = true;
 
         uint256 balance = unclaimedBalance[mbidHash];
