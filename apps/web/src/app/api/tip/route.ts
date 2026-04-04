@@ -14,11 +14,12 @@ interface TipRecord {
   platform: string;
   listenerAddress: string | null;
   timestamp: number;
+  txHash: string | null;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { artist, track, platform, listenerAddress } = await request.json();
+    const { artist, track, platform, listenerAddress, txHash } = await request.json();
 
     if (!artist || !track) {
       return NextResponse.json(
@@ -45,10 +46,11 @@ export async function POST(request: NextRequest) {
       track,
       mbid,
       mbidHash,
-      amount: 0.05,
+      amount: 0.01,
       platform: platform || "unknown",
       listenerAddress: listenerAddress || null,
       timestamp: Date.now(),
+      txHash: txHash || null,
     };
 
     tipQueue.unshift(record);

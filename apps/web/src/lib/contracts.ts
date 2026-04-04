@@ -93,6 +93,13 @@ export const PATRON_ESCROW_ABI = [
     inputs: [{ name: "", type: "bytes32" }],
     outputs: [{ name: "", type: "address" }],
   },
+  {
+    name: "verifyAndRelease",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "mbidHash", type: "bytes32" }],
+    outputs: [],
+  },
 ] as const;
 
 export const PATRON_REGISTRY_ABI = [
@@ -167,6 +174,16 @@ export const ERC20_ABI = [
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "transfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
   },
 ] as const;
 

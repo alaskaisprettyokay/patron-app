@@ -14,7 +14,7 @@ interface WorldIDProof {
 }
 
 const WORLD_APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID || "";
-const IS_CONFIGURED = WORLD_APP_ID && !WORLD_APP_ID.startsWith("app_your");
+const IS_CONFIGURED = WORLD_APP_ID && !WORLD_APP_ID.startsWith("app_your") && WORLD_APP_ID !== "app_demo";
 
 export function WorldIDVerify({ onVerified }: WorldIDVerifyProps) {
   const [verified, setVerified] = useState(false);
@@ -35,19 +35,14 @@ export function WorldIDVerify({ onVerified }: WorldIDVerifyProps) {
     setError(null);
 
     if (IS_CONFIGURED) {
-      // Real World ID: dynamically import IDKit to avoid SSR issues
       try {
         const { IDKitWidget, VerificationLevel } = await import("@worldcoin/idkit");
-        // IDKit is widget-based, so we trigger it programmatically
-        // For the hackathon, fall through to the mock if import fails
         setVerifying(false);
         setError("Click the World ID button to verify");
       } catch {
-        // Fall back to mock if IDKit import fails
         useMockVerification();
       }
     } else {
-      // Mock verification for development/demo
       useMockVerification();
     }
   };
@@ -65,16 +60,9 @@ export function WorldIDVerify({ onVerified }: WorldIDVerifyProps) {
 
   if (verified) {
     return (
-      <div className="flex items-center gap-2 text-accent">
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-            clipRule="evenodd"
-          />
-        </svg>
-        <span className="text-sm font-medium">Verified Human (World ID)</span>
-      </div>
+      <span className="text-xs font-mono text-accent">
+        [x] Verified human
+      </span>
     );
   }
 
@@ -86,24 +74,19 @@ export function WorldIDVerify({ onVerified }: WorldIDVerifyProps) {
         <button
           onClick={handleVerify}
           disabled={verifying}
-          className="btn-secondary flex items-center gap-2"
+          className="btn-secondary text-sm"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
-            <circle cx="12" cy="12" r="4" />
-          </svg>
           {verifying ? "Verifying..." : "Verify with World ID"}
         </button>
       )}
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-accent text-xs">{error}</p>}
       {!IS_CONFIGURED && (
-        <p className="text-gray-600 text-xs">Demo mode — no World ID app configured</p>
+        <p className="text-ink-faint text-xs">Demo mode</p>
       )}
     </div>
   );
 }
 
-// Wrapper that dynamically renders IDKitWidget when available
 function WorldIDWidget({
   appId,
   onSuccess,
@@ -114,13 +97,11 @@ function WorldIDWidget({
   const [Widget, setWidget] = useState<React.ComponentType<any> | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Dynamically load IDKit on mount
   if (!loaded) {
     setLoaded(true);
     import("@worldcoin/idkit")
       .then((mod) => setWidget(() => mod.IDKitWidget))
       .catch(() => {
-        // If IDKit fails to load, onSuccess with mock
         onSuccess({
           merkle_root: "0x" + "1".repeat(64),
           nullifier_hash: "0x" + "2".repeat(64),
@@ -132,7 +113,7 @@ function WorldIDWidget({
 
   if (!Widget) {
     return (
-      <button disabled className="btn-secondary flex items-center gap-2 opacity-50">
+      <button disabled className="btn-secondary text-sm opacity-50">
         Loading World ID...
       </button>
     );
@@ -153,11 +134,7 @@ function WorldIDWidget({
       verification_level="device"
     >
       {({ open }: { open: () => void }) => (
-        <button onClick={open} className="btn-secondary flex items-center gap-2">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
-            <circle cx="12" cy="12" r="4" />
-          </svg>
+        <button onClick={open} className="btn-secondary text-sm">
           Verify with World ID
         </button>
       )}

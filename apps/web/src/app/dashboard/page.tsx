@@ -1,42 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract } from "wagmi";
+import { type Address } from "viem";
 import { ESCROW_ADDRESS, PATRON_ESCROW_ABI, formatUSDC } from "@/lib/contracts";
-import { DepositModal } from "@/components/DepositModal";
+import { FundExtension } from "@/components/FundExtension";
 import { TipFeed } from "@/components/TipFeed";
 import { WorldIDVerify } from "@/components/WorldIDVerify";
 
 export default function DashboardPage() {
-  const { address, isConnected } = useAccount();
-  const [showDeposit, setShowDeposit] = useState(false);
+  const { isConnected } = useAccount();
   const [isHumanVerified, setIsHumanVerified] = useState(false);
+  const [extWalletAddr, setExtWalletAddr] = useState<Address | undefined>();
+  const [uniqueArtists, setUniqueArtists] = useState(0);
 
-  const { data: balance } = useReadContract({
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      if (event.data?.type === "PATRON_STATUS" && event.data.status) {
+        setUniqueArtists(event.data.status.uniqueArtists || 0);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  const { data: extBalance } = useReadContract({
     address: ESCROW_ADDRESS,
     abi: PATRON_ESCROW_ABI,
     functionName: "listenerBalance",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    args: extWalletAddr ? [extWalletAddr] : undefined,
+    query: { enabled: !!extWalletAddr, refetchInterval: 5000 },
   });
 
-  const { data: totalTipped } = useReadContract({
+  const { data: extTotalTipped } = useReadContract({
     address: ESCROW_ADDRESS,
     abi: PATRON_ESCROW_ABI,
     functionName: "totalTipped",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    args: extWalletAddr ? [extWalletAddr] : undefined,
+    query: { enabled: !!extWalletAddr, refetchInterval: 5000 },
   });
+
+  const balance = (extBalance as bigint) || 0n;
+  const totalTipped = (extTotalTipped as bigint) || 0n;
+
+  const onExtWalletDetected = useCallback((addr: string) => {
+    setExtWalletAddr(addr as Address);
+  }, []);
 
   if (!isConnected) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-24 text-center">
-        <h1 className="text-3xl font-bold mb-4">Listener Dashboard</h1>
-        <p className="text-gray-400 mb-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
+        <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+        <p className="text-ink-light text-sm mb-6">
           Connect your wallet to start tipping artists.
         </p>
-        <div className="card inline-block px-8 py-6">
-          <p className="text-gray-400">
+        <div className="card">
+          <p className="text-ink-light text-sm">
             Use the connect button in the navigation bar to get started.
           </p>
         </div>
@@ -45,86 +65,69 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
         <WorldIDVerify onVerified={() => setIsHumanVerified(true)} />
       </div>
 
-      {/* Balance cards */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-8">
-        <div className="card">
-          <div className="text-sm text-gray-400 mb-1">Balance</div>
-          <div className="text-2xl font-bold text-white">
-            ${balance ? formatUSDC(balance as bigint) : "0.00"}
+      {/* Balance row */}
+      <div className="grid sm:grid-cols-3 gap-px bg-rule mb-8 border border-rule">
+        <div className="bg-paper p-4">
+          <div className="section-label mb-1">Tip balance</div>
+          <div className="mono-value text-xl font-bold">
+            ${balance ? formatUSDC(balance) : "0.00"}
           </div>
-          <div className="text-xs text-gray-500 mt-1">USDC available for tips</div>
+          <div className="text-xs text-ink-faint mt-0.5">USDC available</div>
         </div>
-        <div className="card">
-          <div className="text-sm text-gray-400 mb-1">Total Tipped</div>
-          <div className="text-2xl font-bold text-accent">
-            ${totalTipped ? formatUSDC(totalTipped as bigint) : "0.00"}
+        <div className="bg-paper p-4">
+          <div className="section-label mb-1">Total tipped</div>
+          <div className="mono-value text-xl font-bold text-accent">
+            ${totalTipped ? formatUSDC(totalTipped) : "0.00"}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Lifetime contributions</div>
+          <div className="text-xs text-ink-faint mt-0.5">Lifetime</div>
         </div>
-        <div className="card">
-          <div className="text-sm text-gray-400 mb-1">Artists Supported</div>
-          <div className="text-2xl font-bold text-purple-400">0</div>
-          <div className="text-xs text-gray-500 mt-1">Unique artists tipped</div>
+        <div className="bg-paper p-4">
+          <div className="section-label mb-1">Artists</div>
+          <div className="mono-value text-xl font-bold">{uniqueArtists}</div>
+          <div className="text-xs text-ink-faint mt-0.5">Unique supported</div>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3 mb-8">
-        <button onClick={() => setShowDeposit(true)} className="btn-primary">
-          Deposit USDC
-        </button>
-        <a
-          href="#extension"
-          className="btn-secondary"
-        >
-          Install Extension
-        </a>
-      </div>
+      {/* Extension wallet */}
+      <FundExtension onWalletDetected={onExtWalletDetected} />
 
       {/* Setup checklist */}
       <div className="card mb-8">
-        <h2 className="text-lg font-semibold mb-4">Setup Checklist</h2>
-        <div className="space-y-3">
+        <div className="section-label mb-4">Setup</div>
+        <div className="space-y-2.5">
           <CheckItem done={isConnected} label="Connect wallet" />
           <CheckItem done={isHumanVerified} label="Verify humanity (World ID)" />
-          <CheckItem
-            done={balance ? (balance as bigint) > 0n : false}
-            label="Deposit USDC"
-          />
-          <CheckItem done={false} label="Install Chrome extension" />
-          <CheckItem done={false} label="Play a track and auto-tip" />
+          <CheckItem done={!!extWalletAddr} label="Extension detected" />
+          <CheckItem done={balance > 0n} label="Fund extension for auto-tips" />
+          <CheckItem done={totalTipped > 0n} label="Play a track and auto-tip" />
         </div>
       </div>
 
       {/* Recent tips */}
       <div className="card">
-        <h2 className="text-lg font-semibold mb-4">Recent Tips</h2>
+        <div className="section-label mb-4">Recent tips</div>
         <TipFeed />
       </div>
-
-      <DepositModal isOpen={showDeposit} onClose={() => setShowDeposit(false)} />
     </div>
   );
 }
 
 function CheckItem({ done, label }: { done: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 text-sm">
       <div
-        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-          done
-            ? "border-accent bg-accent/20"
-            : "border-gray-600"
+        className={`w-4 h-4 border flex items-center justify-center ${
+          done ? "border-accent bg-accent-muted" : "border-rule-dark"
         }`}
       >
         {done && (
-          <svg className="w-3 h-3 text-accent" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-2.5 h-2.5 text-accent" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
               d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -133,7 +136,7 @@ function CheckItem({ done, label }: { done: boolean; label: string }) {
           </svg>
         )}
       </div>
-      <span className={done ? "text-gray-400 line-through" : "text-white"}>
+      <span className={done ? "text-ink-faint line-through" : "text-ink"}>
         {label}
       </span>
     </div>

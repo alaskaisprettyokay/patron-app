@@ -1,17 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifiedMbids } from "@/lib/verified-store";
 
 export async function POST(request: NextRequest) {
   try {
-    const { mbid, code, url } = await request.json();
+    const { mbid, code, url, demo } = await request.json();
 
-    if (!mbid || !code) {
+    if (!mbid) {
       return NextResponse.json(
-        { error: "mbid and code are required" },
+        { error: "mbid is required" },
         { status: 400 }
       );
     }
 
-    // Verify the code exists on the artist's page
+    // Demo mode — auto-pass verification
+    if (demo) {
+      verifiedMbids.add(mbid);
+      return NextResponse.json({
+        verified: true,
+        mbid,
+        demo: true,
+        message: "Demo verification — auto-approved.",
+      });
+    }
+
+    if (!code) {
+      return NextResponse.json(
+        { error: "code is required" },
+        { status: 400 }
+      );
+    }
+
+    // Real verification — check the code exists on the artist's page
     if (url) {
       try {
         const res = await fetch(url, {
@@ -33,8 +52,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // In production: call contract's verifyAndRelease via backend signer
-    // For hackathon: return success and let frontend handle the claim tx
+    verifiedMbids.add(mbid);
+
     return NextResponse.json({
       verified: true,
       mbid,

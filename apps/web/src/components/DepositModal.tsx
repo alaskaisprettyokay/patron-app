@@ -22,8 +22,8 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const [amount, setAmount] = useState("10");
   const [step, setStep] = useState<"approve" | "deposit" | "done">("approve");
 
-  const { writeContract: approveWrite, data: approveTx, isPending: approvePending } = useWriteContract();
-  const { writeContract: depositWrite, data: depositTx, isPending: depositPending } = useWriteContract();
+  const { writeContract: approveWrite, data: approveTx, isPending: approvePending, error: approveError } = useWriteContract();
+  const { writeContract: depositWrite, data: depositTx, isPending: depositPending, error: depositError } = useWriteContract();
 
   const { isLoading: approveConfirming, isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveTx });
   const { isLoading: depositConfirming, isSuccess: depositConfirmed } = useWaitForTransactionReceipt({ hash: depositTx });
@@ -102,7 +102,7 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
           </div>
 
           <div className="text-sm text-gray-400">
-            At $0.05/listen, ${amount} covers ~{Math.floor(Number(amount) / 0.05)} listens
+            At $0.01/listen, ${amount} covers ~{Math.floor(Number(amount) / 0.01)} listens
           </div>
 
           <div className="relative py-2">
@@ -137,6 +137,12 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
               <button onClick={onClose} className="btn-primary mt-4">
                 Done
               </button>
+            </div>
+          )}
+
+          {(approveError || depositError) && (
+            <div className="text-red-400 text-sm bg-red-400/10 rounded-lg p-3">
+              {(approveError || depositError)?.message?.slice(0, 200) || "Transaction failed"}
             </div>
           )}
         </div>
