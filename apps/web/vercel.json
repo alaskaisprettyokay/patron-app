@@ -1,4 +1,4 @@
 {
-  "installCommand": "npm install --legacy-peer-deps",
-  "outputDirectory": ".next"
+  "framework": "nextjs",
+  "installCommand": "npm install --legacy-peer-deps"
 }
