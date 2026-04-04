@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { searchArtist, getArtistDetails, getArtistUrls, type MBArtist } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, mbidToBytes32, formatUSDC } from "@/lib/contracts";
@@ -17,7 +17,9 @@ export default function ClaimPage() {
   const [selectedArtist, setSelectedArtist] = useState<MBArtist | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [verifyUrl, setVerifyUrl] = useState("");
+  const [soundcloudUrl, setSoundcloudUrl] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [hasExtension, setHasExtension] = useState(false);
   const [releaseResult, setReleaseResult] = useState<{
     txHash?: string;
     unclaimedReleased?: string;
@@ -26,6 +28,40 @@ export default function ClaimPage() {
 
   const { writeContract, data: claimHash } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash });
+
+  // Detect if the onda extension is installed
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.data?.type === "ONDA_WALLET_INFO" || event.data?.type === "ONDA_STATUS") {
+        setHasExtension(true);
+      }
+    }
+    window.addEventListener("message", onMessage);
+    window.postMessage({ type: "ONDA_REQUEST_WALLET_INFO" }, "*");
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // Listen for SoundCloud verification result from extension
+  const handleExtensionVerifyResult = useCallback((event: MessageEvent) => {
+    if (event.data?.type !== "ONDA_VERIFY_SOUNDCLOUD_RESULT") return;
+    const { result } = event.data;
+
+    setVerifying(false);
+    if (result?.verified) {
+      setStep("claim");
+    } else if (result?.error) {
+      setError(result.error);
+    } else {
+      setError(
+        "verification code not found in soundcloud bio. make sure you saved it and try again."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("message", handleExtensionVerifyResult);
+    return () => window.removeEventListener("message", handleExtensionVerifyResult);
+  }, [handleExtensionVerifyResult]);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -48,9 +84,23 @@ export default function ClaimPage() {
     try {
       const details = await getArtistDetails(artist.id);
       const urls = getArtistUrls(details.relations);
+      setSoundcloudUrl(urls.soundcloud || "");
       setVerifyUrl(urls.bandcamp || urls.website || urls.soundcloud || "");
     } catch {}
     setStep("verify");
+  };
+
+  const handleSoundCloudVerify = () => {
+    if (!selectedArtist || !soundcloudUrl) return;
+    setVerifying(true);
+    setError("");
+    // Ask the extension to open the SoundCloud profile and check the bio
+    window.postMessage({
+      type: "ONDA_VERIFY_SOUNDCLOUD",
+      url: soundcloudUrl,
+      code: verificationCode,
+      mbid: selectedArtist.id,
+    }, "*");
   };
 
   const handleVerify = async (demo: boolean) => {
@@ -184,24 +234,74 @@ export default function ClaimPage() {
       {step === "verify" && selectedArtist && (
         <div>
           <h2 className="text-xl font-bold mb-4">verify you're {selectedArtist.name}</h2>
-          {verifyUrl ? (
-            <>
-              <p className="text-ink-light text-sm mb-4">
-                add this code to your page, then click verify:
-              </p>
-              <div className="ink-block p-4 mb-4 text-center font-mono text-onda">
-                {verificationCode}
-              </div>
-              <p className="text-ink-faint text-xs mb-6">
-                your page:{" "}
-                <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-onda hover:underline">
-                  {verifyUrl}
+
+          <p className="text-ink-light text-sm mb-3">
+            add this code to {soundcloudUrl ? "your soundcloud bio" : "your website"}, then click verify:
+          </p>
+          <div className="ink-block p-4 mb-4 text-center font-mono text-onda select-all cursor-pointer">
+            {verificationCode}
+          </div>
+
+          {/* SoundCloud verification via extension */}
+          {soundcloudUrl && hasExtension && (
+            <div className="mb-4">
+              <p className="text-ink-faint text-xs mb-3">
+                go to{" "}
+                <a
+                  href={soundcloudUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-onda hover:underline"
+                >
+                  {soundcloudUrl.replace(/^https?:\/\//, "")}
                 </a>
+                {" "}→ edit your profile → paste the code in your bio → save → come back and click verify.
               </p>
+              <button
+                onClick={handleSoundCloudVerify}
+                disabled={verifying}
+                className="btn-primary w-full"
+              >
+                {verifying ? "checking soundcloud..." : "verify via soundcloud"}
+              </button>
+            </div>
+          )}
+
+          {/* SoundCloud URL shown but no extension */}
+          {soundcloudUrl && !hasExtension && (
+            <p className="text-ink-faint text-xs mb-4">
+              soundcloud profile found:{" "}
+              <a href={soundcloudUrl} target="_blank" rel="noopener noreferrer" className="text-onda hover:underline">
+                {soundcloudUrl.replace(/^https?:\/\//, "")}
+              </a>
+              . install the onda extension to verify via soundcloud, or use manual verification below.
+            </p>
+          )}
+
+          {/* Divider when both methods available */}
+          {soundcloudUrl && hasExtension && verifyUrl && (
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 border-t border-rule" />
+              <span className="text-xs text-ink-faint">or verify manually</span>
+              <div className="flex-1 border-t border-rule" />
+            </div>
+          )}
+
+          {/* Manual website verification — fallback */}
+          {verifyUrl && (
+            <>
+              {(!soundcloudUrl || !hasExtension) && (
+                <p className="text-ink-faint text-xs mb-6">
+                  your page:{" "}
+                  <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-onda hover:underline">
+                    {verifyUrl}
+                  </a>
+                </p>
+              )}
               <div className="flex gap-3">
                 <button onClick={() => setStep("search")} className="btn-secondary">back</button>
                 <button onClick={() => handleVerify(false)} disabled={verifying} className="btn-primary flex-1">
-                  {verifying ? "checking..." : "verify"}
+                  {verifying ? "checking..." : soundcloudUrl && hasExtension ? "verify with website" : "verify"}
                 </button>
               </div>
               <button
@@ -212,10 +312,12 @@ export default function ClaimPage() {
                 skip verification (demo mode)
               </button>
             </>
-          ) : (
+          )}
+
+          {!verifyUrl && !soundcloudUrl && (
             <>
               <p className="text-ink-light text-sm mb-6">
-                no website found on MusicBrainz. use demo mode to proceed.
+                no website or soundcloud found on MusicBrainz. use demo mode to proceed.
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setStep("search")} className="btn-secondary">back</button>
@@ -224,6 +326,15 @@ export default function ClaimPage() {
                 </button>
               </div>
             </>
+          )}
+
+          {!verifyUrl && soundcloudUrl && !hasExtension && (
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setStep("search")} className="btn-secondary">back</button>
+              <button onClick={() => handleVerify(true)} disabled={verifying} className="btn-primary flex-1">
+                {verifying ? "verifying..." : "continue in demo mode"}
+              </button>
+            </div>
           )}
         </div>
       )}

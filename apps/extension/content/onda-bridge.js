@@ -48,4 +48,17 @@ window.addEventListener("message", (event) => {
     sendStatusToPage();
   }
 
+  if (event.data?.type === "ONDA_VERIFY_SOUNDCLOUD") {
+    const { url, code, mbid } = event.data;
+    chrome.runtime.sendMessage(
+      { type: "ONDA_VERIFY_SOUNDCLOUD", data: { url, code, mbid } },
+      (result) => {
+        window.postMessage({
+          type: "ONDA_VERIFY_SOUNDCLOUD_RESULT",
+          result: result || { error: "No response from extension" },
+        }, "*");
+      }
+    );
+  }
+
 });

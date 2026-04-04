@@ -121,6 +121,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         .then(sendResponse)
         .catch((err) => sendResponse({ error: err.message }));
       return true;
+
+    case "ONDA_VERIFY_SOUNDCLOUD":
+      handleSoundCloudVerify(data)
+        .then(sendResponse)
+        .catch((err) => sendResponse({ error: err.message }));
+      return true;
   }
 
   chrome.storage.local.set({ scrobbleState });
@@ -216,6 +222,57 @@ async function handleScrobbleComplete({ artist, track, platform }) {
     scrobbleState = { ...scrobbleState, status: "error" };
     chrome.storage.local.set({ scrobbleState });
   }
+}
+
+async function handleSoundCloudVerify({ url, code, mbid }) {
+  // Find an existing SoundCloud tab on the artist's profile, or open one
+  const tabs = await chrome.tabs.query({ url: "https://soundcloud.com/*" });
+  let tab = tabs.find((t) => t.url && normalizeScUrl(t.url) === normalizeScUrl(url));
+
+  if (!tab) {
+    // Open the profile in a new tab
+    tab = await chrome.tabs.create({ url, active: false });
+    // Wait for it to load
+    await new Promise((resolve) => {
+      function listener(tabId, info) {
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      }
+      chrome.tabs.onUpdated.addListener(listener);
+    });
+    // Give the SPA a moment to render the bio
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  // Ask the content script on that tab to read the bio
+  const result = await chrome.tabs.sendMessage(tab.id, {
+    type: "ONDA_CHECK_SC_BIO",
+    code,
+  });
+
+  // Close the tab if we opened it
+  if (!tabs.find((t) => t.id === tab.id)) {
+    chrome.tabs.remove(tab.id).catch(() => {});
+  }
+
+  if (result.found) {
+    // Call the web app to mark verified
+    const verifyRes = await fetch(`${API_BASE}/api/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mbid, code, verified: true }),
+    });
+    const verifyData = await verifyRes.json();
+    return { verified: true, ...verifyData };
+  }
+
+  return { verified: false, bio: result.bio, url: result.url };
+}
+
+function normalizeScUrl(url) {
+  return url.toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
 }
 
 function updateBadge(text, color) {
