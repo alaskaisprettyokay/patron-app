@@ -1,17 +1,24 @@
 // Patron Service Worker — handles scrobble + tip flow
 
+importScripts("wallet.bundle.js");
+
 const API_BASE = "http://localhost:3000";
-const TIP_AMOUNT = 0.05;
+const TIP_AMOUNT = 0.01;
 
 // Current scrobble state
 let scrobbleState = {
-  status: "idle", // idle | listening | scrobbled | paused | skipped
+  status: "idle",
   artist: null,
   track: null,
   platform: null,
   percent: 0,
   threshold: 10000,
 };
+
+// Initialize wallet on startup
+PatronWallet.initWallet().then((info) => {
+  console.log(`[Patron] Wallet ready: ${info.address}${info.isNew ? " (new)" : ""}`);
+});
 
 // Listen for messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -27,7 +34,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         percent: 0,
         threshold: data.threshold,
       };
-      updateBadge("🎵", "#6c63ff");
+      updateBadge("·", "#6c63ff");
       break;
 
     case "SCROBBLE_PROGRESS":
@@ -38,7 +45,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         artist: data.artist,
         track: data.track,
       };
-      // Update badge with progress
       const pct = data.percent;
       if (pct < 33) updateBadge("·", "#666");
       else if (pct < 66) updateBadge("··", "#999");
@@ -53,7 +59,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case "SCROBBLE_SKIPPED":
       scrobbleState = { ...scrobbleState, status: "skipped", percent: 0 };
       updateBadge("⏭", "#ff6b6b");
-      // Clear skip indicator after 2s
       setTimeout(() => {
         if (scrobbleState.status === "skipped") {
           scrobbleState = { ...scrobbleState, status: "idle" };
@@ -63,16 +68,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case "TRACK_DETECTED":
-      // Scrobble complete — fire the tip!
       handleScrobbleComplete(data);
       break;
 
     case "GET_STATUS":
       getFullStatus().then(sendResponse);
-      return true; // async response
+      return true;
+
+    case "GET_WALLET_INFO":
+      PatronWallet.getWalletInfo().then(sendResponse);
+      return true;
+
+    case "INIT_WALLET":
+      PatronWallet.initWallet().then(sendResponse);
+      return true;
+
+    case "APPROVE_AND_DEPOSIT":
+      PatronWallet.approveAndDeposit()
+        .then((result) => sendResponse({ success: true, ...result }))
+        .catch((err) => sendResponse({ error: err.message }));
+      return true;
   }
 
-  // Store state for popup
   chrome.storage.local.set({ scrobbleState });
   sendResponse({ received: true });
   return false;
@@ -93,7 +110,7 @@ async function handleScrobbleComplete({ artist, track, platform }) {
   chrome.storage.local.set({ scrobbleState });
 
   try {
-    // Look up artist on MusicBrainz via our API
+    // Look up artist on MusicBrainz
     const lookupUrl = `${API_BASE}/api/lookup?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}`;
     const res = await fetch(lookupUrl);
 
@@ -106,13 +123,35 @@ async function handleScrobbleComplete({ artist, track, platform }) {
 
     const data = await res.json();
 
-    // Store scrobble + tip in history
-    const { tipHistory = [], scrobbleHistory = [] } = await chrome.storage.local.get([
-      "tipHistory",
-      "scrobbleHistory",
-    ]);
+    if (data.artist?.mbidHash) {
+      // Send tip on-chain
+      try {
+        const tipResult = await PatronWallet.sendTip(data.artist.mbidHash);
+        console.log(`[Patron] On-chain tip tx: ${tipResult.txHash}`);
+        scrobbleState = { ...scrobbleState, status: "tipped", txHash: tipResult.txHash };
 
-    const scrobbleEntry = {
+        // Notify dashboard so tip appears in feed
+        fetch(`${API_BASE}/api/tip`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            artist: data.artist.name || artist,
+            track: data.track?.title || track,
+            platform,
+            txHash: tipResult.txHash,
+          }),
+        }).catch(() => {}); // best-effort, don't block
+      } catch (err) {
+        console.warn(`[Patron] Tip failed: ${err.message}`);
+        scrobbleState = { ...scrobbleState, status: "tip_failed", tipError: err.message };
+      }
+      chrome.storage.local.set({ scrobbleState });
+    }
+
+    // Store in history
+    const { tipHistory = [] } = await chrome.storage.local.get(["tipHistory"]);
+
+    tipHistory.unshift({
       artist: data.artist?.name || artist,
       track: data.track?.title || track,
       mbid: data.artist?.mbid,
@@ -120,21 +159,13 @@ async function handleScrobbleComplete({ artist, track, platform }) {
       amount: TIP_AMOUNT,
       platform,
       timestamp: Date.now(),
-    };
+      txHash: scrobbleState.txHash || null,
+    });
 
-    // Add to both histories
-    tipHistory.unshift(scrobbleEntry);
-    scrobbleHistory.unshift(scrobbleEntry);
-
-    // Keep last 100
     if (tipHistory.length > 100) tipHistory.length = 100;
-    if (scrobbleHistory.length > 200) scrobbleHistory.length = 200;
+    await chrome.storage.local.set({ tipHistory });
 
-    await chrome.storage.local.set({ tipHistory, scrobbleHistory });
-
-    console.log(
-      `[Patron] Tip recorded: $${TIP_AMOUNT} → ${data.artist?.name || artist} (MBID: ${data.artist?.mbid || "unknown"})`
-    );
+    console.log(`[Patron] Tip recorded: $${TIP_AMOUNT} → ${data.artist?.name || artist}`);
   } catch (error) {
     console.error("[Patron] Error:", error);
     scrobbleState = { ...scrobbleState, status: "error" };
@@ -148,17 +179,14 @@ function updateBadge(text, color) {
 }
 
 async function getFullStatus() {
-  const data = await chrome.storage.local.get([
-    "scrobbleState",
-    "tipHistory",
-    "scrobbleHistory",
-  ]);
+  const data = await chrome.storage.local.get(["scrobbleState", "tipHistory"]);
   const tips = data.tipHistory || [];
+  const uniqueArtists = new Set(tips.map((t) => t.artist)).size;
   return {
     scrobble: data.scrobbleState || scrobbleState,
     tipCount: tips.length,
     totalTipped: (tips.length * TIP_AMOUNT).toFixed(2),
+    uniqueArtists,
     recentTips: tips.slice(0, 10),
-    recentScrobbles: (data.scrobbleHistory || []).slice(0, 20),
   };
 }
