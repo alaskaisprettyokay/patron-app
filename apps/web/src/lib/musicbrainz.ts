@@ -1,5 +1,5 @@
 const MB_BASE_URL = "https://musicbrainz.org/ws/2";
-const USER_AGENT = "PatronApp/0.1.0 (patron.xyz)";
+const USER_AGENT = "OndaApp/0.1.0 (onda.xyz)";
 
 export interface MBArtist {
   id: string; // MBID

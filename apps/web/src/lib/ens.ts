@@ -8,5 +8,5 @@ export function artistToSubname(artistName: string): string {
 }
 
 export function formatENSName(subname: string): string {
-  return `${subname}.patron.eth`;
+  return `${subname}.onda.eth`;
 }

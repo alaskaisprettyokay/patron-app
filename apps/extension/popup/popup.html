@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -18,22 +19,15 @@
 
     /* Receipt header */
     .header {
-      text-align: center;
       padding-bottom: 10px;
       margin-bottom: 10px;
       border-bottom: 1px dashed #c4bcb0;
     }
     .logo {
-      font-size: 13px;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-    }
-    .tagline {
-      font-size: 9px;
-      color: #78716c;
-      margin-top: 2px;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
+      text-transform: lowercase;
     }
 
     /* Stats line */
@@ -44,7 +38,7 @@
       color: #78716c;
     }
     .stats-row strong { color: #1c1917; }
-    .stats-row .accent { color: #b84a32; font-weight: 500; }
+    .stats-row .accent { color: #c27a3f; font-weight: 500; }
 
     /* Divider */
     .divider {
@@ -61,7 +55,7 @@
     /* Section label */
     .label {
       font-size: 9px;
-      text-transform: uppercase;
+      text-transform: lowercase;
       letter-spacing: 2px;
       color: #a8a29e;
       margin-bottom: 6px;
@@ -71,15 +65,15 @@
     .now-playing {
       padding: 8px 0;
     }
-    .track-name {
-      font-size: 12px;
+    .artist-name {
+      font-size: 13px;
       font-weight: 700;
       color: #1c1917;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .artist-name {
+    .track-name {
       font-size: 11px;
       color: #78716c;
       margin-top: 1px;
@@ -92,7 +86,7 @@
       color: #78716c;
       margin-top: 4px;
       letter-spacing: 1px;
-      text-transform: uppercase;
+      text-transform: lowercase;
     }
 
     /* Progress bar */
@@ -110,7 +104,7 @@
       width: 0%;
     }
     .progress-fill.listening { background: #1c1917; }
-    .progress-fill.complete { background: #b84a32; }
+    .progress-fill.complete { background: #c27a3f; }
     .progress-text {
       display: flex;
       justify-content: space-between;
@@ -119,15 +113,24 @@
       margin-top: 3px;
     }
 
-    /* Tip result */
-    .tip-result {
+    /* Gift result */
+    .gift-result {
       margin-top: 6px;
       font-size: 11px;
       font-weight: 500;
     }
-    .tip-result.paid { color: #b84a32; }
-    .tip-result.escrowed { color: #78716c; }
-    .tip-result a { color: inherit; }
+    .gift-result.sent { color: #c27a3f; }
+    .gift-result.escrowed { color: #78716c; }
+    .gift-result a { color: inherit; }
+
+    /* Gift detail lines */
+    .gift-detail {
+      font-size: 10px;
+      color: #78716c;
+      margin-top: 3px;
+      line-height: 1.6;
+    }
+    .gift-detail .diamond { color: #c27a3f; }
 
     /* History / receipt items */
     .history-item {
@@ -137,9 +140,9 @@
       padding: 3px 0;
       font-size: 10px;
     }
-    .history-item .track { color: #1c1917; }
-    .history-item .artist { color: #a8a29e; font-size: 9px; }
-    .history-item .amount { color: #b84a32; font-weight: 500; text-align: right; white-space: nowrap; }
+    .history-item .h-artist { color: #1c1917; font-weight: 500; }
+    .history-item .h-track { color: #a8a29e; font-size: 9px; }
+    .history-item .amount { color: #c27a3f; font-weight: 500; text-align: right; white-space: nowrap; }
     .history-item .amount a { color: inherit; text-decoration: none; }
     .history-item .amount a:hover { text-decoration: underline; }
 
@@ -166,9 +169,9 @@
       font-size: 10px;
       cursor: pointer;
     }
-    .wallet-addr:hover { color: #b84a32; }
+    .wallet-addr:hover { color: #c27a3f; }
     .wallet-val { color: #1c1917; font-weight: 500; }
-    .wallet-val.funded { color: #b84a32; }
+    .wallet-val.funded { color: #c27a3f; }
     .wallet-val.empty { color: #a8a29e; }
     .wallet-btn {
       width: 100%;
@@ -182,7 +185,7 @@
       cursor: pointer;
       margin-top: 8px;
       letter-spacing: 1px;
-      text-transform: uppercase;
+      text-transform: lowercase;
     }
     .wallet-btn:hover { background: transparent; color: #1c1917; }
     .wallet-btn:disabled { opacity: 0.4; cursor: default; }
@@ -199,7 +202,7 @@
     }
     .wallet-btn-sm:hover { border-color: #1c1917; color: #1c1917; }
     .wallet-fund { margin-top: 6px; }
-    .fund-label { font-size: 9px; color: #a8a29e; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; }
+    .fund-label { font-size: 9px; color: #a8a29e; margin-bottom: 3px; letter-spacing: 1px; }
     .fund-addr {
       font-size: 9px;
       color: #78716c;
@@ -209,44 +212,40 @@
       border: 1px solid #c4bcb0;
     }
     .wallet-ready {
-      text-align: center;
-      color: #b84a32;
+      color: #c27a3f;
       font-size: 10px;
       font-weight: 500;
       margin-top: 6px;
     }
-    .wallet-error { color: #b84a32; font-size: 10px; }
+    .wallet-error { color: #c27a3f; font-size: 10px; }
 
     /* Footer */
     .footer {
       margin-top: 10px;
       padding-top: 8px;
       border-top: 1px dashed #c4bcb0;
-      text-align: center;
     }
     .footer a {
       font-size: 9px;
       color: #a8a29e;
       text-decoration: none;
       letter-spacing: 1px;
-      text-transform: uppercase;
     }
     .footer a:hover { color: #1c1917; }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">Patron</div>
-    <div class="tagline">direct music micropayments</div>
+    <div class="logo">onda</div>
   </div>
 
   <div class="stats-row">
-    <span>Total tipped</span>
-    <strong class="accent" id="total-tipped">$0.00</strong>
+    <span>total given</span>
+    <strong class="accent" id="total-given">$0.00</strong>
   </div>
   <div class="stats-row">
-    <span>Scrobbles</span>
-    <strong id="tip-count">0</strong>
+    <span>tracks</span>
+    <strong id="gift-count">0</strong>
   </div>
 
   <hr class="divider">
@@ -258,10 +257,10 @@
   <hr class="divider">
 
   <div id="app">
-    <div class="label">Now playing</div>
+    <div class="label">now listening</div>
     <div class="now-playing">
-      <div class="track-name" id="track-name">—</div>
-      <div class="artist-name" id="artist-name">Play something to get started</div>
+      <div class="artist-name" id="artist-name">--</div>
+      <div class="track-name" id="track-name">play something to get started</div>
       <div id="platform-badge" style="display: none;"></div>
       <div class="progress-container" id="progress-container" style="display: none;">
         <div class="progress-bar">
@@ -272,12 +271,13 @@
           <span id="progress-target">10s</span>
         </div>
       </div>
-      <div class="tip-result" id="tip-result" style="display: none;"></div>
+      <div class="gift-result" id="gift-result" style="display: none;"></div>
+      <div class="gift-detail" id="gift-detail" style="display: none;"></div>
     </div>
 
     <div id="history-section" style="display: none;">
       <hr class="divider">
-      <div class="label">Recent</div>
+      <div class="label">recent</div>
       <div id="history-list"></div>
     </div>
 
@@ -286,7 +286,7 @@
   </div>
 
   <div class="footer">
-    <a href="http://localhost:3000/dashboard" target="_blank">Open dashboard</a>
+    <a href="http://localhost:3000/dashboard" target="_blank">open dashboard</a>
   </div>
 
   <script src="popup.js"></script>

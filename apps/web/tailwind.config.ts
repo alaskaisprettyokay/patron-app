@@ -18,9 +18,9 @@ const config: Config = {
           DEFAULT: "#d6d0c8",
           dark: "#c4bcb0",
         },
-        accent: {
-          DEFAULT: "#b84a32",
-          muted: "rgba(184, 74, 50, 0.12)",
+        onda: {
+          DEFAULT: "#c27a3f",
+          muted: "rgba(194, 122, 63, 0.12)",
         },
       },
       fontFamily: {

@@ -13,9 +13,9 @@ const ConnectButtonWrapper = dynamic(
 );
 
 export const metadata: Metadata = {
-  title: "Patron — Direct Music Micropayments",
+  title: "onda",
   description:
-    "Detect what you're listening to. Pay artists directly. USDC micropayments for music.",
+    "Detect what you're listening to. Send gifts directly to artists.",
 };
 
 export default function RootLayout({
@@ -30,21 +30,21 @@ export default function RootLayout({
           <nav className="border-b border-rule">
             <div className="max-w-5xl mx-auto px-4 sm:px-6">
               <div className="flex justify-between items-center h-14">
-                <a href="/" className="font-mono text-sm font-bold tracking-[0.2em] uppercase">
-                  Patron
+                <a href="/" className="font-mono text-base font-bold lowercase">
+                  onda
                 </a>
                 <div className="flex items-center gap-6">
                   <a
                     href="/dashboard"
                     className="text-ink-light hover:text-ink transition-colors text-sm"
                   >
-                    Dashboard
+                    dashboard
                   </a>
                   <a
                     href="/claim"
                     className="text-ink-light hover:text-ink transition-colors text-sm"
                   >
-                    Claim
+                    claim
                   </a>
                   <ConnectButtonWrapper />
                 </div>

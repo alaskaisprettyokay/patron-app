@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchRecording } from "@/lib/musicbrainz";
 import { mbidToBytes32 } from "@/lib/contracts";
 
-// In-memory tip queue for demo (in production, use a database)
-const tipQueue: TipRecord[] = [];
+// In-memory gift queue for demo (in production, use a database)
+const giftQueue: GiftRecord[] = [];
 
-interface TipRecord {
+interface GiftRecord {
   artist: string;
   track: string;
   mbid: string | null;
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       // MusicBrainz lookup is best-effort
     }
 
-    const record: TipRecord = {
+    const record: GiftRecord = {
       artist,
       track,
       mbid,
@@ -53,20 +53,19 @@ export async function POST(request: NextRequest) {
       txHash: txHash || null,
     };
 
-    tipQueue.unshift(record);
-    // Keep last 200 tips in memory
-    if (tipQueue.length > 200) tipQueue.length = 200;
+    giftQueue.unshift(record);
+    if (giftQueue.length > 200) giftQueue.length = 200;
 
     return NextResponse.json({
       success: true,
-      tip: record,
+      gift: record,
     });
   } catch (error) {
-    console.error("Tip error:", error);
-    return NextResponse.json({ error: "Tip failed" }, { status: 500 });
+    console.error("Gift error:", error);
+    return NextResponse.json({ error: "Gift failed" }, { status: 500 });
   }
 }
 
 export async function GET() {
-  return NextResponse.json({ tips: tipQueue.slice(0, 50) });
+  return NextResponse.json({ gifts: giftQueue.slice(0, 50) });
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-interface TipRecord {
+interface GiftRecord {
   artist: string;
   track: string;
   amount: number;
@@ -21,27 +21,27 @@ function timeAgo(ts: number): string {
 }
 
 const platformNames: Record<string, string> = {
-  spotify: "Spotify",
-  soundcloud: "SoundCloud",
-  bandcamp: "Bandcamp",
-  "youtube-music": "YouTube Music",
+  spotify: "spotify",
+  soundcloud: "soundcloud",
+  bandcamp: "bandcamp",
+  "youtube-music": "youtube music",
 };
 
-export function TipFeed() {
-  const [tips, setTips] = useState<TipRecord[]>([]);
+export function GiftFeed() {
+  const [gifts, setGifts] = useState<GiftRecord[]>([]);
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
-      if (event.data?.type === "PATRON_STATUS" && event.data.status?.recentTips) {
-        setTips(event.data.status.recentTips);
+      if (event.data?.type === "ONDA_STATUS" && event.data.status?.recentGifts) {
+        setGifts(event.data.status.recentGifts);
       }
     };
 
     window.addEventListener("message", handler);
-    window.postMessage({ type: "PATRON_REQUEST_STATUS" }, "*");
+    window.postMessage({ type: "ONDA_REQUEST_STATUS" }, "*");
     const interval = setInterval(() => {
-      window.postMessage({ type: "PATRON_REQUEST_STATUS" }, "*");
+      window.postMessage({ type: "ONDA_REQUEST_STATUS" }, "*");
     }, 5000);
 
     return () => {
@@ -50,42 +50,42 @@ export function TipFeed() {
     };
   }, []);
 
-  if (tips.length === 0) {
+  if (gifts.length === 0) {
     return (
       <div className="py-6 text-ink-faint text-sm">
-        No tips yet. Play music with the extension installed to start tipping artists.
+        nothing yet. play music with the extension installed to start.
       </div>
     );
   }
 
   return (
     <div className="divide-y divide-rule">
-      {tips.slice(0, 10).map((tip, i) => (
+      {gifts.slice(0, 10).map((gift, i) => (
         <div
-          key={`${tip.timestamp}-${i}`}
+          key={`${gift.timestamp}-${i}`}
           className="flex items-center justify-between py-3"
         >
           <div>
-            <div className="font-medium text-sm">{tip.artist}</div>
-            <div className="text-xs text-ink-faint">{tip.track}</div>
+            <div className="font-medium text-sm">{gift.artist}</div>
+            <div className="text-xs text-ink-faint">{gift.track}</div>
           </div>
           <div className="text-right">
             <div className="mono-value text-sm font-medium">
-              {tip.txHash ? (
+              {gift.txHash ? (
                 <a
-                  href={`https://testnet.arcscan.app/tx/${tip.txHash}`}
+                  href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-accent hover:underline"
+                  className="text-onda hover:underline"
                 >
-                  ${tip.amount?.toFixed(2) || "0.01"}
+                  ${gift.amount?.toFixed(2) || "0.01"}
                 </a>
               ) : (
-                <span className="text-ink">${tip.amount?.toFixed(2) || "0.01"}</span>
+                <span className="text-ink">${gift.amount?.toFixed(2) || "0.01"}</span>
               )}
             </div>
             <div className="text-xs text-ink-faint">
-              {platformNames[tip.platform] || tip.platform} · {timeAgo(tip.timestamp)}
+              {platformNames[gift.platform] || gift.platform} · {timeAgo(gift.timestamp)}
             </div>
           </div>
         </div>

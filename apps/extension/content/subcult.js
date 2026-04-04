@@ -1,4 +1,4 @@
-// Patron Content Script — Subcult (app.subcult.music)
+// onda content script — Subcult (app.subcult.music)
 // Uses hybrid approach: listens for first-party postMessage events,
 // falls back to DOM scraping if events not available
 
@@ -14,7 +14,7 @@
   // --- First-party integration: listen for Subcult player events ---
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
-    if (!event.data || event.data.type !== "PATRON_TRACK") return;
+    if (!event.data || event.data.type !== "ONDA_TRACK") return;
 
     usingPostMessage = true;
     const { artist, track, mbid, playing } = event.data;

@@ -7,21 +7,21 @@ export default function Home() {
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-16">
         <div className="max-w-xl">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] mb-5">
-            Every listen
+            Every play sends
             <br />
-            pays the artist.
+            a wave.
           </h1>
           <p className="text-ink-light text-lg mb-8 leading-relaxed">
-            Spotify pays artists $0.003 per stream.
+            Spotify sends artists $0.003 per stream.
             <br />
-            Patron lets you pay them $0.05 directly.
+            onda lets you give them $0.01 directly.
           </p>
           <div className="flex gap-3">
             <Link href="/dashboard" className="btn-primary">
-              Start listening
+              start listening
             </Link>
             <Link href="/claim" className="btn-secondary">
-              I'm an artist
+              i'm an artist
             </Link>
           </div>
         </div>
@@ -44,8 +44,8 @@ export default function Home() {
               <div className="text-sm text-ink-faint mt-0.5">middlemen</div>
             </div>
             <div>
-              <div className="mono-value text-2xl font-bold">USDC</div>
-              <div className="text-sm text-ink-faint mt-0.5">stablecoin</div>
+              <div className="mono-value text-2xl font-bold">USD</div>
+              <div className="text-sm text-ink-faint mt-0.5">real dollars</div>
             </div>
           </div>
         </div>
@@ -53,30 +53,30 @@ export default function Home() {
 
       {/* How it works */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
-        <div className="section-label mb-8">How it works</div>
+        <div className="section-label mb-8">how it works</div>
         <div className="grid md:grid-cols-3 gap-10">
           <div>
-            <div className="font-mono text-accent text-sm mb-2">01</div>
-            <h3 className="font-semibold mb-1">Listen to music</h3>
+            <div className="font-mono text-onda text-sm mb-2">01</div>
+            <h3 className="font-semibold mb-1">listen to music</h3>
             <p className="text-ink-light text-sm leading-relaxed">
               Play on Spotify, SoundCloud, Bandcamp, or YouTube Music.
-              The extension detects what's playing.
+              onda detects what's playing.
             </p>
           </div>
           <div>
-            <div className="font-mono text-accent text-sm mb-2">02</div>
-            <h3 className="font-semibold mb-1">Auto-tip per track</h3>
+            <div className="font-mono text-onda text-sm mb-2">02</div>
+            <h3 className="font-semibold mb-1">gifts go out automatically</h3>
             <p className="text-ink-light text-sm leading-relaxed">
-              Each track triggers a USDC micropayment from your deposited
-              balance. If the artist hasn't claimed, it's held in escrow.
+              Each track sends a gift from your balance.
+              If the artist hasn't claimed yet, it waits for them.
             </p>
           </div>
           <div>
-            <div className="font-mono text-accent text-sm mb-2">03</div>
-            <h3 className="font-semibold mb-1">Artists get paid</h3>
+            <div className="font-mono text-onda text-sm mb-2">03</div>
+            <h3 className="font-semibold mb-1">artists collect</h3>
             <p className="text-ink-light text-sm leading-relaxed">
-              Artists claim their profile, verify identity, and receive
-              tips directly to their wallet.
+              Artists claim their profile, verify their identity, and
+              receive gifts directly.
             </p>
           </div>
         </div>
@@ -85,7 +85,7 @@ export default function Home() {
       {/* Platforms */}
       <section className="border-t border-rule">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
-          <div className="section-label mb-6">Works where you listen</div>
+          <div className="section-label mb-6">works where you listen</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
             {["Spotify", "SoundCloud", "Bandcamp", "YouTube Music"].map(
               (platform) => (
@@ -105,13 +105,12 @@ export default function Home() {
       <section className="border-t border-rule">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
           <div className="max-w-md">
-            <h2 className="text-xl font-bold mb-2">Ready to support artists?</h2>
+            <h2 className="text-xl font-bold mb-2">add some funds and onda handles the rest</h2>
             <p className="text-ink-light text-sm mb-6">
-              Deposit as little as $5 and start auto-tipping every artist you
-              listen to. Takes 2 minutes.
+              Deposit as little as $5. Every artist you listen to gets something.
             </p>
             <Link href="/dashboard" className="btn-primary">
-              Get started
+              get started
             </Link>
           </div>
         </div>
@@ -121,7 +120,7 @@ export default function Home() {
       <footer className="border-t border-rule py-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex justify-between items-center">
           <span className="text-xs text-ink-faint font-mono">
-            Built at ETHGlobal Cannes 2025
+            buena onda
           </span>
           <a
             href="https://github.com/alaskaisprettyokay/patron-app"

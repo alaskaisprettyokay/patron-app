@@ -4,8 +4,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useReadContract } from "wagmi";
 import { getArtistDetails, getArtistUrls, type MBArtistDetails } from "@/lib/musicbrainz";
-import { ESCROW_ADDRESS, PATRON_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
-import { REGISTRY_ADDRESS, PATRON_REGISTRY_ABI } from "@/lib/contracts";
+import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
+import { REGISTRY_ADDRESS, ONDA_REGISTRY_ABI } from "@/lib/contracts";
 import { formatENSName } from "@/lib/ens";
 
 export default function ArtistPage() {
@@ -29,14 +29,14 @@ export default function ArtistPage() {
 
   const { data: artistInfo } = useReadContract({
     address: ESCROW_ADDRESS,
-    abi: PATRON_ESCROW_ABI,
+    abi: ONDA_ESCROW_ABI,
     functionName: "getArtistInfo",
     args: [mbidHash],
   });
 
   const { data: subname } = useReadContract({
     address: REGISTRY_ADDRESS,
-    abi: PATRON_REGISTRY_ABI,
+    abi: ONDA_REGISTRY_ABI,
     functionName: "artistSubname",
     args: [mbidHash],
   });
@@ -44,7 +44,7 @@ export default function ArtistPage() {
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
-        <div className="text-ink-faint text-sm">Loading artist...</div>
+        <div className="text-ink-faint text-sm">loading artist...</div>
       </div>
     );
   }
@@ -52,11 +52,11 @@ export default function ArtistPage() {
   if (!artist) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
-        <h1 className="text-xl font-bold mb-2">Artist not found</h1>
-        <p className="text-ink-light text-sm mb-1">Could not find artist with MBID:</p>
+        <h1 className="text-xl font-bold mb-2">can't find this artist yet</h1>
+        <p className="text-ink-light text-sm mb-1">we're looking.</p>
         <p className="font-mono text-xs text-ink-faint">{mbid}</p>
         {loadError && (
-          <p className="text-accent text-xs mt-2">{loadError}</p>
+          <p className="text-onda text-xs mt-2">{loadError}</p>
         )}
       </div>
     );
@@ -74,18 +74,18 @@ export default function ArtistPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-1">{artist.name}</h1>
-        {ensName && ensName !== ".patron.eth" && (
-          <div className="text-accent text-sm font-mono mb-1">{ensName}</div>
+        {ensName && ensName !== ".onda.eth" && (
+          <div className="text-onda text-sm font-mono mb-1">{ensName}</div>
         )}
         <div className="flex items-center gap-3 text-sm text-ink-faint">
           {artist.disambiguation && <span>{artist.disambiguation}</span>}
           {artist.country && <span>{artist.country}</span>}
           {isClaimed && verified ? (
-            <span className="text-accent font-medium">Verified</span>
+            <span className="text-onda font-medium">verified</span>
           ) : isClaimed ? (
-            <span className="text-ink-light">Claimed — pending verification</span>
+            <span className="text-ink-light">claimed</span>
           ) : (
-            <span>Unclaimed</span>
+            <span>unclaimed</span>
           )}
         </div>
       </div>
@@ -93,28 +93,28 @@ export default function ArtistPage() {
       {/* Stats */}
       <div className="grid sm:grid-cols-3 gap-px bg-rule mb-8 border border-rule">
         <div className="bg-paper p-4">
-          <div className="section-label mb-1">Tips received</div>
+          <div className="section-label mb-1">gifts received</div>
           <div className="mono-value text-xl font-bold">
             ${unclaimed ? formatUSDC(unclaimed as bigint) : "0.00"}
           </div>
           <div className="text-xs text-ink-faint mt-0.5">
-            {isClaimed ? "Claimed" : "In escrow"}
+            {isClaimed ? "claimed" : "waiting for artist"}
           </div>
         </div>
         <div className="bg-paper p-4">
-          <div className="section-label mb-1">Status</div>
+          <div className="section-label mb-1">status</div>
           <div className="text-xl font-bold">
             {isClaimed && verified ? (
-              <span className="text-accent">Active</span>
+              <span className="text-onda">active</span>
             ) : isClaimed ? (
-              <span className="text-ink-light">Pending</span>
+              <span className="text-ink-light">pending</span>
             ) : (
-              <span className="text-ink-faint">Unclaimed</span>
+              <span className="text-ink-faint">unclaimed</span>
             )}
           </div>
         </div>
         <div className="bg-paper p-4">
-          <div className="section-label mb-1">MBID</div>
+          <div className="section-label mb-1">mbid</div>
           <div className="text-xs font-mono text-ink-faint break-all">{mbid}</div>
         </div>
       </div>
@@ -122,7 +122,7 @@ export default function ArtistPage() {
       {/* Links */}
       {Object.keys(urls).length > 0 && (
         <div className="card mb-8">
-          <div className="section-label mb-3">Links</div>
+          <div className="section-label mb-3">links</div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(urls).map(([platform, url]) => (
               <a
@@ -130,7 +130,7 @@ export default function ArtistPage() {
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 border border-rule text-sm hover:border-ink-light transition-colors capitalize"
+                className="px-3 py-1.5 border border-rule text-sm hover:border-ink-light transition-colors"
               >
                 {platform}
               </a>
@@ -141,14 +141,14 @@ export default function ArtistPage() {
 
       {/* Claim CTA */}
       {!isClaimed && (
-        <div className="card border-accent">
-          <div className="section-label mb-2">Are you {artist.name}?</div>
+        <div className="card border-onda">
+          <div className="section-label mb-2">are you {artist.name}?</div>
           <p className="text-ink-light text-sm mb-3">
-            People have been paying you. Claim this profile to receive tips directly.
-            {unclaimed ? ` You have $${formatUSDC(unclaimed as bigint)} waiting.` : ""}
+            people have been giving to you. claim this profile to receive gifts directly.
+            {unclaimed ? ` you have $${formatUSDC(unclaimed as bigint)} waiting.` : ""}
           </p>
           <a href="/claim" className="btn-primary inline-block text-sm">
-            Claim this profile
+            claim this profile
           </a>
         </div>
       )}

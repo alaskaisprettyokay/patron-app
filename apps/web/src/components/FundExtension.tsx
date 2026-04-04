@@ -26,7 +26,7 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
 
-      if (event.data?.type === "PATRON_WALLET_INFO") {
+      if (event.data?.type === "ONDA_WALLET_INFO") {
         setDetected(true);
         if (event.data.wallet?.address) {
           setExtWallet(event.data.wallet);
@@ -36,10 +36,10 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
     };
 
     window.addEventListener("message", handler);
-    window.postMessage({ type: "PATRON_REQUEST_WALLET_INFO" }, "*");
+    window.postMessage({ type: "ONDA_REQUEST_WALLET_INFO" }, "*");
 
     const interval = setInterval(() => {
-      window.postMessage({ type: "PATRON_REQUEST_WALLET_INFO" }, "*");
+      window.postMessage({ type: "ONDA_REQUEST_WALLET_INFO" }, "*");
     }, 10000);
 
     return () => {
@@ -65,9 +65,9 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
   if (!detected) {
     return (
       <div className="card mb-8">
-        <div className="section-label mb-2">Extension</div>
+        <div className="section-label mb-2">extension</div>
         <p className="text-sm text-ink-light">
-          Extension not detected. Install Patron for Chrome and refresh this page.
+          extension not detected. install onda for Chrome and refresh this page.
         </p>
       </div>
     );
@@ -76,8 +76,8 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
   if (!extWallet) {
     return (
       <div className="card mb-8">
-        <div className="section-label mb-2">Extension</div>
-        <p className="text-sm text-ink-light">Waiting for wallet info from extension...</p>
+        <div className="section-label mb-2">extension</div>
+        <p className="text-sm text-ink-light">connecting to extension...</p>
       </div>
     );
   }
@@ -87,27 +87,27 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
 
   return (
     <div className="card mb-8">
-      <div className="section-label mb-4">Extension tip wallet</div>
+      <div className="section-label mb-4">extension account</div>
 
       <div className="grid sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <div className="text-xs text-ink-faint mb-1">Wallet address</div>
+          <div className="text-xs text-ink-faint mb-1">address</div>
           <div
-            className="font-mono text-xs text-ink-light cursor-pointer hover:text-accent break-all"
+            className="font-mono text-xs text-ink-light cursor-pointer hover:text-onda break-all"
             onClick={() => navigator.clipboard.writeText(extWallet.address)}
-            title="Click to copy"
+            title="click to copy"
           >
             {extWallet.address}
           </div>
         </div>
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="text-ink-faint">USDC Balance</span>
+            <span className="text-ink-faint">balance</span>
             <span className="mono-value">${extWallet.usdcBalance}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-ink-faint">Tip Balance</span>
-            <span className={`mono-value ${funded ? "text-accent" : "text-ink-light"}`}>
+            <span className="text-ink-faint">gift balance</span>
+            <span className={`mono-value ${funded ? "text-onda" : "text-ink-light"}`}>
               ${extWallet.escrowBalance}
             </span>
           </div>
@@ -115,17 +115,17 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
       </div>
 
       {funded ? (
-        <div className="py-2 text-accent text-sm font-medium">
-          Ready to auto-tip.
+        <div className="py-2 text-onda text-sm font-medium">
+          ready to send gifts.
         </div>
       ) : hasUsdc ? (
         <div className="py-2 text-ink-light text-sm">
-          USDC received. Click Deposit in the extension popup to activate.
+          funds received. click deposit in the extension popup to activate.
         </div>
       ) : isConnected && !sent ? (
         <div className="space-y-3">
           <div className="text-sm text-ink-light">
-            Fund your extension wallet from your connected wallet:
+            add funds from your connected account:
           </div>
           <div className="flex gap-2 items-center">
             <div className="flex gap-1.5">
@@ -148,17 +148,17 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
               disabled={isPending || isConfirming}
               className="btn-primary text-sm px-4 py-1.5"
             >
-              {isConfirming ? "Confirming..." : isPending ? "Confirm in wallet..." : `Send $${amount}`}
+              {isConfirming ? "confirming..." : isPending ? "confirm in wallet..." : `send $${amount}`}
             </button>
           </div>
         </div>
       ) : sent ? (
-        <div className="py-2 text-accent text-sm font-medium">
-          USDC sent. Click Deposit in the extension popup to activate tipping.
+        <div className="py-2 text-onda text-sm font-medium">
+          funds sent. click deposit in the extension popup to activate.
         </div>
       ) : (
         <div className="text-sm text-ink-light">
-          Connect your wallet above, then fund the extension.
+          sign in above, then add funds.
         </div>
       )}
     </div>

@@ -28,7 +28,7 @@
     @apply border border-rule p-5;
   }
   .section-label {
-    @apply text-xs font-mono uppercase tracking-widest text-ink-faint;
+    @apply text-xs font-mono lowercase tracking-widest text-ink-faint;
   }
   .mono-value {
     @apply font-mono tabular-nums;

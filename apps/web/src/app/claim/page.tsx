@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { searchArtist, getArtistDetails, getArtistUrls, type MBArtist } from "@/lib/musicbrainz";
-import { ESCROW_ADDRESS, PATRON_ESCROW_ABI, mbidToBytes32, formatUSDC } from "@/lib/contracts";
+import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, mbidToBytes32, formatUSDC } from "@/lib/contracts";
 import { artistToSubname, formatENSName } from "@/lib/ens";
 
 type Step = "search" | "verify" | "claim" | "releasing" | "done";
@@ -35,7 +35,7 @@ export default function ClaimPage() {
       const artists = await searchArtist(query);
       setResults(artists);
     } catch (err) {
-      setError("Search failed. Try again.");
+      setError("can't find that right now. try again.");
     } finally {
       setSearching(false);
     }
@@ -43,7 +43,7 @@ export default function ClaimPage() {
 
   const handleSelectArtist = async (artist: MBArtist) => {
     setSelectedArtist(artist);
-    const code = `patron-verify-${artist.id.slice(0, 8)}`;
+    const code = `onda-verify-${artist.id.slice(0, 8)}`;
     setVerificationCode(code);
 
     try {
@@ -76,10 +76,10 @@ export default function ClaimPage() {
       if (data.verified) {
         setStep("claim");
       } else {
-        setError(data.error || "Verification failed.");
+        setError(data.error || "verification didn't work.");
       }
     } catch {
-      setError("Verification request failed.");
+      setError("couldn't reach the server.");
     } finally {
       setVerifying(false);
     }
@@ -93,7 +93,7 @@ export default function ClaimPage() {
     writeContract(
       {
         address: ESCROW_ADDRESS,
-        abi: PATRON_ESCROW_ABI,
+        abi: ONDA_ESCROW_ABI,
         functionName: "claimArtist",
         args: [mbidHash],
       },
@@ -121,11 +121,11 @@ export default function ClaimPage() {
         setReleaseResult(data);
         setStep("done");
       } else {
-        setError(data.error || "Release failed.");
+        setError(data.error || "something went wrong.");
         setStep("claim");
       }
     } catch {
-      setError("Release request failed.");
+      setError("couldn't reach the server.");
       setStep("claim");
     }
   };
@@ -133,13 +133,13 @@ export default function ClaimPage() {
   if (!isConnected) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
-        <h1 className="text-2xl font-bold mb-2">Claim your artist profile</h1>
+        <h1 className="text-2xl font-bold mb-2">claim your profile</h1>
         <p className="text-ink-light text-sm mb-6">
-          Connect your wallet to claim your profile and receive tips.
+          sign in to claim your profile and receive gifts.
         </p>
         <div className="card">
           <p className="text-ink-light text-sm">
-            Use the connect button in the navigation bar to get started.
+            use the connect button in the navigation bar to get started.
           </p>
         </div>
       </div>
@@ -151,9 +151,9 @@ export default function ClaimPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-      <h1 className="text-2xl font-bold mb-1">Claim your artist profile</h1>
+      <h1 className="text-2xl font-bold mb-1">claim your profile</h1>
       <p className="text-ink-light text-sm mb-8">
-        Verify you're the artist. Connect your wallet. Start receiving tips.
+        people have been giving to you. here's your money.
       </p>
 
       {/* Progress */}
@@ -165,19 +165,19 @@ export default function ClaimPage() {
                 stepIndex === i
                   ? "text-ink font-bold"
                   : stepIndex > i
-                  ? "text-accent"
+                  ? "text-onda"
                   : "text-ink-faint"
               }
             >
               {stepIndex > i ? "[x]" : `[${i + 1}]`} {s}
             </span>
-            {i < 3 && <span className="text-rule-dark mx-1">—</span>}
+            {i < 3 && <span className="text-rule-dark mx-1">--</span>}
           </div>
         ))}
       </div>
 
       {error && (
-        <div className="border border-accent bg-accent-muted p-3 mb-4 text-accent text-sm">
+        <div className="border border-onda bg-onda-muted p-3 mb-4 text-onda text-sm">
           {error}
         </div>
       )}
@@ -185,18 +185,18 @@ export default function ClaimPage() {
       {/* Step 1: Search */}
       {step === "search" && (
         <div className="card">
-          <div className="section-label mb-4">Find your artist profile</div>
+          <div className="section-label mb-4">find your artist profile</div>
           <div className="flex gap-2 mb-4">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Search by artist name..."
+              placeholder="search by artist name..."
               className="flex-1 bg-paper border border-rule px-4 py-2 text-ink text-sm focus:outline-none focus:border-ink"
             />
             <button onClick={handleSearch} disabled={searching} className="btn-primary text-sm">
-              {searching ? "..." : "Search"}
+              {searching ? "..." : "search"}
             </button>
           </div>
           {results.length > 0 && (
@@ -224,29 +224,29 @@ export default function ClaimPage() {
       {step === "verify" && selectedArtist && (
         <div className="card">
           <div className="section-label mb-4">
-            Verify you're {selectedArtist.name}
+            verify you're {selectedArtist.name}
           </div>
 
           {verifyUrl ? (
             <>
               <p className="text-ink-light text-sm mb-4">
-                Add this verification code to your page, then click verify:
+                add this code to your page, then click verify:
               </p>
-              <div className="bg-paper-dark border border-rule p-3 mb-4 font-mono text-sm text-accent text-center select-all">
+              <div className="bg-paper-dark border border-rule p-3 mb-4 font-mono text-sm text-onda text-center select-all">
                 {verificationCode}
               </div>
               <p className="text-ink-faint text-xs mb-4">
-                Your page:{" "}
-                <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                your page:{" "}
+                <a href={verifyUrl} target="_blank" rel="noopener noreferrer" className="text-onda hover:underline">
                   {verifyUrl}
                 </a>
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setStep("search")} className="btn-secondary text-sm">
-                  Back
+                  back
                 </button>
                 <button onClick={() => handleVerify(false)} disabled={verifying} className="btn-primary text-sm flex-1">
-                  {verifying ? "Checking..." : "I've added the code — verify"}
+                  {verifying ? "checking..." : "i've added the code -- verify"}
                 </button>
               </div>
               <div className="mt-3 pt-3 border-t border-rule">
@@ -255,21 +255,21 @@ export default function ClaimPage() {
                   disabled={verifying}
                   className="text-xs text-ink-faint hover:text-ink w-full text-center"
                 >
-                  Skip verification (demo mode)
+                  skip verification (demo mode)
                 </button>
               </div>
             </>
           ) : (
             <>
               <p className="text-ink-light text-sm mb-4">
-                No website found for this artist on MusicBrainz. You can use demo mode to proceed.
+                no website found for this artist on MusicBrainz. you can use demo mode to proceed.
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setStep("search")} className="btn-secondary text-sm">
-                  Back
+                  back
                 </button>
                 <button onClick={() => handleVerify(true)} disabled={verifying} className="btn-primary text-sm flex-1">
-                  {verifying ? "Verifying..." : "Continue in demo mode"}
+                  {verifying ? "verifying..." : "continue in demo mode"}
                 </button>
               </div>
             </>
@@ -280,31 +280,31 @@ export default function ClaimPage() {
       {/* Step 3: Claim */}
       {step === "claim" && selectedArtist && (
         <div className="card">
-          <div className="section-label mb-4">Claim your profile</div>
+          <div className="section-label mb-4">claim your profile</div>
           <div className="space-y-2 mb-6 text-sm">
             <div className="flex justify-between">
-              <span className="text-ink-faint">Artist</span>
+              <span className="text-ink-faint">artist</span>
               <span className="font-medium">{selectedArtist.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-ink-faint">ENS Name</span>
-              <span className="font-mono text-accent text-xs">
+              <span className="text-ink-faint">name</span>
+              <span className="font-mono text-onda text-xs">
                 {formatENSName(artistToSubname(selectedArtist.name))}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-ink-faint">Wallet</span>
+              <span className="text-ink-faint">account</span>
               <span className="font-mono text-xs">{address}</span>
             </div>
           </div>
 
           {!claimConfirmed ? (
             <button onClick={handleClaim} className="btn-primary w-full text-sm" disabled={!!claimHash}>
-              {claimHash ? "Confirming on-chain..." : "Claim profile"}
+              {claimHash ? "confirming..." : "claim profile"}
             </button>
           ) : (
             <button onClick={handleRelease} className="btn-primary w-full text-sm">
-              Verify and release funds
+              verify and release funds
             </button>
           )}
         </div>
@@ -313,25 +313,25 @@ export default function ClaimPage() {
       {/* Step 3.5: Releasing */}
       {step === "releasing" && (
         <div className="card py-8">
-          <div className="text-ink-light text-sm mb-1">Verifying on-chain...</div>
-          <p className="text-ink-faint text-xs">The relayer is calling verifyAndRelease. This may take a moment.</p>
+          <div className="text-ink-light text-sm mb-1">verifying...</div>
+          <p className="text-ink-faint text-xs">this may take a moment.</p>
         </div>
       )}
 
       {/* Step 4: Done */}
       {step === "done" && selectedArtist && (
         <div className="card py-8">
-          <div className="section-label mb-3">Claimed</div>
-          <h2 className="text-xl font-bold mb-2">Profile claimed.</h2>
+          <div className="section-label mb-3">claimed</div>
+          <h2 className="text-xl font-bold mb-2">you're all set.</h2>
           <p className="text-ink-light text-sm mb-2">
-            You're now registered as{" "}
-            <span className="text-accent font-mono">
+            you're now registered as{" "}
+            <span className="text-onda font-mono">
               {formatENSName(artistToSubname(selectedArtist.name))}
             </span>
           </p>
           {releaseResult?.unclaimedReleased && releaseResult.unclaimedReleased !== "0" && (
-            <p className="text-accent font-mono font-medium text-sm mb-2">
-              ${formatUSDC(BigInt(releaseResult.unclaimedReleased))} USDC released to your wallet.
+            <p className="text-onda font-mono font-medium text-sm mb-2">
+              ${formatUSDC(BigInt(releaseResult.unclaimedReleased))} released to your account.
             </p>
           )}
           {releaseResult?.txHash && (
@@ -339,19 +339,19 @@ export default function ClaimPage() {
               href={`https://testnet.arcscan.app/tx/${releaseResult.txHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent text-xs hover:underline"
+              className="text-onda text-xs hover:underline"
             >
-              View transaction
+              view on-chain
             </a>
           )}
           <p className="text-ink-faint text-xs mt-4 mb-6">
-            Future tips from listeners will be sent directly to your wallet.
+            future gifts from listeners will go directly to your account.
           </p>
           <a
             href={`/artist/${selectedArtist.id}`}
             className="btn-primary inline-block text-sm"
           >
-            View your profile
+            view your profile
           </a>
         </div>
       )}

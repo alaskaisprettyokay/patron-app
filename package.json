@@ -1,7 +1,7 @@
 {
-  "name": "patron",
+  "name": "onda",
   "private": true,
-  "description": "Music micropayments — detect what you're listening to, tip artists directly",
+  "description": "detect what you're listening to, send gifts directly to artists",
   "scripts": {
     "dev": "cd apps/web && npm run dev",
     "build": "cd apps/web && npm run build",
