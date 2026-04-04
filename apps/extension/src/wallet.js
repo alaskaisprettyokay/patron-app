@@ -102,9 +102,10 @@ export async function getJoinUri() {
   return `${process.env.PATRON_WEB_URL}/connect?session=${sessionAddress}`;
 }
 
-/// Checks whether our session key is active on-chain.
-/// Reads sessionKey() directly from the smart account — no getLogs needed.
-/// Returns null if not yet linked or if the session key has been rotated.
+/// Checks whether our session key has been linked on-chain.
+/// First checks if we already know the smart account and verifies the session key is still active.
+/// If no smart account is stored, falls back to scanning Joined event logs to discover the link.
+/// Returns null if not yet linked.
 export async function checkForJoin() {
   const data = await chrome.storage.local.get([
     "sessionAddress",
@@ -112,23 +113,50 @@ export async function checkForJoin() {
     "smartAccountAddress",
   ]);
   const { sessionAddress, ownerAddress, smartAccountAddress } = data;
-  if (!sessionAddress || !smartAccountAddress) return null;
+  if (!sessionAddress) return null;
 
-  try {
-    const publicClient = getPublicClient();
-    const onChainSession = await publicClient.readContract({
-      address: smartAccountAddress,
-      abi: SMART_ACCOUNT_ABI,
-      functionName: "sessionKey",
-    });
-    if (onChainSession.toLowerCase() === sessionAddress.toLowerCase()) {
-      return { ownerAddress, smartAccountAddress };
+  const publicClient = getPublicClient();
+
+  // If we already have a stored smart account, verify the session key is still active
+  if (smartAccountAddress) {
+    try {
+      const onChainSession = await publicClient.readContract({
+        address: smartAccountAddress,
+        abi: SMART_ACCOUNT_ABI,
+        functionName: "sessionKey",
+      });
+      if (onChainSession.toLowerCase() === sessionAddress.toLowerCase()) {
+        return { ownerAddress, smartAccountAddress };
+      }
+      // Session key was rotated out — clear stale state so QR re-renders
+      await chrome.storage.local.set({ ownerAddress: null, smartAccountAddress: null });
+      return null;
+    } catch (err) {
+      console.error("[Patron] checkForJoin verify failed:", err);
+      return null;
     }
-    // Session key was rotated out — clear stale state so QR re-renders
-    await chrome.storage.local.set({ ownerAddress: null, smartAccountAddress: null });
-    return null;
+  }
+
+  // No smart account stored — scan historical Joined events to discover the link
+  try {
+    const logs = await publicClient.getContractEvents({
+      address: ESCROW_ADDRESS,
+      abi: JOINED_ABI,
+      eventName: "Joined",
+      args: { sessionKey: sessionAddress },
+      fromBlock: 0n,
+      toBlock: "latest",
+    });
+    if (logs.length === 0) return null;
+
+    const { user: foundOwner, smartAccount: foundSmartAccount } = logs[0].args;
+    await chrome.storage.local.set({
+      ownerAddress: foundOwner,
+      smartAccountAddress: foundSmartAccount,
+    });
+    return { ownerAddress: foundOwner, smartAccountAddress: foundSmartAccount };
   } catch (err) {
-    console.error("[Patron] checkForJoin failed:", err);
+    console.error("[Patron] checkForJoin log scan failed:", err);
     return null;
   }
 }

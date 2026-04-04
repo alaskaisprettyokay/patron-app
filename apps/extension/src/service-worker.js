@@ -32,7 +32,7 @@ chrome.runtime.onConnect.addListener((port) => {
 
     // Start watching for a new Joined event
     unwatch = await watchForJoin(({ ownerAddress, smartAccountAddress }) => {
-      port.postMessage({ type: "LINKED", ownerAddress, smartAccountAddress });
+      port.postMessage({ type: "LINKED", ownerAddress, smartAccountAddress, sessionAddress: status.sessionAddress });
     });
   });
 
