@@ -23,6 +23,26 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Extension-verified — the extension content script confirmed the code
+    // is present on the artist's SoundCloud profile bio
+    if (request.headers.get("x-onda-source") === "extension" || demo) {
+      if (!demo && !code) {
+        return NextResponse.json(
+          { error: "code is required" },
+          { status: 400 }
+        );
+      }
+      verifiedMbids.add(mbid);
+      return NextResponse.json({
+        verified: true,
+        mbid,
+        method: demo ? "demo" : "extension",
+        message: demo
+          ? "Demo verification — auto-approved."
+          : "Verified via SoundCloud profile.",
+      });
+    }
+
     if (!code) {
       return NextResponse.json(
         { error: "code is required" },
@@ -30,7 +50,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Real verification — check the code exists on the artist's page
+    // Manual verification — check the code exists on the artist's page
     if (url) {
       try {
         const res = await fetch(url, {

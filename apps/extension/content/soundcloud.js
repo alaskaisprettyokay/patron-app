@@ -8,6 +8,42 @@
   let listenStart = null;
   let scrobbled = false;
 
+  // --- Profile bio verification ---
+  // Listen for verification requests from the service worker.
+  // Reads the bio/description from the current profile page DOM.
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type !== "ONDA_CHECK_SC_BIO") return false;
+
+    const { code } = message;
+    const bio = readProfileBio();
+
+    sendResponse({
+      found: bio ? bio.includes(code) : false,
+      bio: bio || null,
+      url: window.location.href,
+    });
+    return true;
+  });
+
+  function readProfileBio() {
+    // SoundCloud profile page: bio lives in a <p> inside .profileHeaderInfo
+    // Several possible selectors depending on SoundCloud's layout
+    const selectors = [
+      ".profileHeaderInfo__description",
+      "[class*='ProfileHeaderInfo'] p",
+      ".userInfoBar__description",
+      'meta[property="og:description"]',
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        if (el.tagName === "META") return el.getAttribute("content") || "";
+        return el.textContent || "";
+      }
+    }
+    return null;
+  }
+
   function getTrackInfo() {
     let artist = null;
     let track = null;
