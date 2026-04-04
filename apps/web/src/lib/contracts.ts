@@ -1,7 +1,7 @@
 import { type Address, formatUnits, keccak256, toBytes } from "viem";
 
 // Contract ABIs (simplified for key functions)
-export const PATRON_ESCROW_ABI = [
+export const ONDA_ESCROW_ABI = [
   {
     name: "deposit",
     type: "function",
@@ -102,7 +102,7 @@ export const PATRON_ESCROW_ABI = [
   },
 ] as const;
 
-export const PATRON_REGISTRY_ABI = [
+export const ONDA_REGISTRY_ABI = [
   {
     name: "registerArtist",
     type: "function",

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-interface TipRecord {
+interface GiftRecord {
   artist: string;
   track: string;
   amount: number;
@@ -11,13 +11,12 @@ interface TipRecord {
   txHash: string | null;
 }
 
-function calculateStreak(tips: TipRecord[]): { current: number; best: number; todayActive: boolean } {
-  if (tips.length === 0) return { current: 0, best: 0, todayActive: false };
+function calculateStreak(gifts: GiftRecord[]): { current: number; best: number; todayActive: boolean } {
+  if (gifts.length === 0) return { current: 0, best: 0, todayActive: false };
 
-  // Get unique days with activity (as date strings)
   const activeDays = new Set<string>();
-  for (const tip of tips) {
-    const d = new Date(tip.timestamp);
+  for (const gift of gifts) {
+    const d = new Date(gift.timestamp);
     activeDays.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
   }
 
@@ -25,11 +24,8 @@ function calculateStreak(tips: TipRecord[]): { current: number; best: number; to
   const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
   const todayActive = activeDays.has(todayKey);
 
-  // Calculate current streak (counting backwards from today/yesterday)
   let current = 0;
   const checkDate = new Date(today);
-
-  // If today isn't active, start from yesterday
   if (!todayActive) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
@@ -44,7 +40,6 @@ function calculateStreak(tips: TipRecord[]): { current: number; best: number; to
     }
   }
 
-  // Calculate best streak
   const sortedDays = Array.from(activeDays)
     .map((key) => {
       const [y, m, d] = key.split("-").map(Number);
@@ -70,28 +65,28 @@ function calculateStreak(tips: TipRecord[]): { current: number; best: number; to
 }
 
 export function ListeningStreak() {
-  const [tips, setTips] = useState<TipRecord[]>([]);
+  const [gifts, setGifts] = useState<GiftRecord[]>([]);
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
-      if (event.data?.type === "PATRON_STATUS" && event.data.status?.recentTips) {
-        setTips(event.data.status.recentTips);
+      if (event.data?.type === "ONDA_STATUS" && event.data.status?.recentGifts) {
+        setGifts(event.data.status.recentGifts);
       }
     };
     window.addEventListener("message", handler);
-    window.postMessage({ type: "PATRON_REQUEST_STATUS" }, "*");
+    window.postMessage({ type: "ONDA_REQUEST_STATUS" }, "*");
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const { current, best, todayActive } = calculateStreak(tips);
+  const { current, best, todayActive } = calculateStreak(gifts);
 
-  // Show last 7 days as dots
+  // Last 7 days as dots
   const dots = [];
   const now = new Date();
   const activeDays = new Set<string>();
-  for (const tip of tips) {
-    const d = new Date(tip.timestamp);
+  for (const gift of gifts) {
+    const d = new Date(gift.timestamp);
     activeDays.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
   }
 
@@ -107,49 +102,34 @@ export function ListeningStreak() {
   }
 
   return (
-    <div className="border border-rule p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="section-label">Streak</div>
-        {todayActive && (
-          <span className="text-[10px] font-mono text-accent uppercase tracking-wider">
-            Active today
-          </span>
-        )}
+    <div>
+      <div className="font-mono text-2xl font-bold">
+        {current}<span className="text-sm text-ink-light font-normal ml-1">day streak</span>
       </div>
-
-      <div className="flex items-baseline gap-1 mb-3">
-        <span className="mono-value text-2xl font-bold">
-          {current}
-        </span>
-        <span className="text-xs text-ink-faint">
-          day{current !== 1 ? "s" : ""}
-        </span>
-        {best > current && (
-          <span className="text-xs text-ink-faint ml-2">
-            Best: {best}d
-          </span>
-        )}
-      </div>
-
-      <div className="flex gap-1.5">
+      <div className="flex items-center gap-1 mt-2">
         {dots.map((dot, i) => (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <div
-              className={`w-5 h-5 flex items-center justify-center text-[9px] font-mono ${
-                dot.active
-                  ? dot.isToday
-                    ? "bg-accent text-paper"
-                    : "bg-ink/15 text-ink"
-                  : dot.isToday
-                    ? "border border-accent/40 text-accent"
-                    : "border border-rule text-ink-faint"
-              }`}
-            >
-              {dot.label}
-            </div>
+          <div
+            key={i}
+            className={`w-4 h-4 flex items-center justify-center text-[8px] font-mono ${
+              dot.active
+                ? dot.isToday
+                  ? "bg-onda text-paper font-bold"
+                  : "bg-ink/15 text-ink"
+                : dot.isToday
+                  ? "border border-onda/40 text-onda"
+                  : "border border-rule text-ink-faint"
+            }`}
+          >
+            {dot.label}
           </div>
         ))}
+        {todayActive && (
+          <span className="text-[9px] font-mono text-onda font-bold ml-1 uppercase">active</span>
+        )}
       </div>
+      {best > current && (
+        <div className="text-xs text-ink-faint mt-1">best: {best}d</div>
+      )}
     </div>
   );
 }

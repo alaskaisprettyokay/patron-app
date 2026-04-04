@@ -1,4 +1,4 @@
-// Patron Content Script — YouTube Music (music.youtube.com)
+// onda content script — YouTube Music (music.youtube.com)
 
 (function () {
   const SCROBBLE_THRESHOLD = 10000;

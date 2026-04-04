@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet } from "viem/chains";
-import { ESCROW_ADDRESS, PATRON_ESCROW_ABI } from "@/lib/contracts";
+import { ESCROW_ADDRESS, ONDA_ESCROW_ABI } from "@/lib/contracts";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Check on-chain state: artist must have called claimArtist first
     const artistInfo = await publicClient.readContract({
       address: ESCROW_ADDRESS,
-      abi: PATRON_ESCROW_ABI,
+      abi: ONDA_ESCROW_ABI,
       functionName: "getArtistInfo",
       args: [mbidHash as `0x${string}`],
     }) as [string, boolean, bigint];
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Call verifyAndRelease on the escrow contract
     const txHash = await walletClient.writeContract({
       address: ESCROW_ADDRESS,
-      abi: PATRON_ESCROW_ABI,
+      abi: ONDA_ESCROW_ABI,
       functionName: "verifyAndRelease",
       args: [mbidHash as `0x${string}`],
     });

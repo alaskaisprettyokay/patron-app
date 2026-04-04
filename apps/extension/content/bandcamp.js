@@ -1,4 +1,4 @@
-// Patron Content Script — Bandcamp (*.bandcamp.com)
+// onda content script — Bandcamp (*.bandcamp.com)
 
 (function () {
   const SCROBBLE_THRESHOLD = 10000;

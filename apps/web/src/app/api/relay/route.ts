@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createWalletClient, http, createPublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { PATRON_ESCROW_ABI } from "@/lib/contracts";
+import { ONDA_ESCROW_ABI } from "@/lib/contracts";
 
 const ARC_RPC = "https://rpc.testnet.arc.network";
 const ESCROW_ADDRESS = process.env.NEXT_PUBLIC_PATRON_ESCROW_ADDRESS as `0x${string}`;
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (action === "tipDefault") {
       const hash = await walletClient.writeContract({
         address: ESCROW_ADDRESS,
-        abi: PATRON_ESCROW_ABI,
+        abi: ONDA_ESCROW_ABI,
         functionName: "tipDefault",
         args: [mbidHash as `0x${string}`],
       });
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       const { amount } = await request.json();
       const hash = await walletClient.writeContract({
         address: ESCROW_ADDRESS,
-        abi: PATRON_ESCROW_ABI,
+        abi: ONDA_ESCROW_ABI,
         functionName: "deposit",
         args: [BigInt(amount)],
       });

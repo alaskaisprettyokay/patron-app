@@ -1,9 +1,9 @@
-// Patron Service Worker — handles scrobble + tip flow
+// onda service worker — handles scrobble + gift flow
 
 importScripts("wallet.bundle.js");
 
 const API_BASE = "http://localhost:3000";
-const TIP_AMOUNT = 0.01;
+const GIFT_AMOUNT = 0.01;
 
 // Current scrobble state
 let scrobbleState = {
@@ -16,8 +16,8 @@ let scrobbleState = {
 };
 
 // Initialize wallet on startup
-PatronWallet.initWallet().then((info) => {
-  console.log(`[Patron] Wallet ready: ${info.address}${info.isNew ? " (new)" : ""}`);
+OndaWallet.initWallet().then((info) => {
+  console.log(`[onda] Wallet ready: ${info.address}${info.isNew ? " (new)" : ""}`);
 });
 
 // Listen for messages from content scripts
@@ -76,15 +76,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case "GET_WALLET_INFO":
-      PatronWallet.getWalletInfo().then(sendResponse);
+      OndaWallet.getWalletInfo().then(sendResponse);
       return true;
 
     case "INIT_WALLET":
-      PatronWallet.initWallet().then(sendResponse);
+      OndaWallet.initWallet().then(sendResponse);
       return true;
 
     case "APPROVE_AND_DEPOSIT":
-      PatronWallet.approveAndDeposit()
+      OndaWallet.approveAndDeposit()
         .then((result) => sendResponse({ success: true, ...result }))
         .catch((err) => sendResponse({ error: err.message }));
       return true;
@@ -96,7 +96,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleScrobbleComplete({ artist, track, platform }) {
-  console.log(`[Patron] Scrobbled: ${artist} — ${track} (${platform})`);
+  console.log(`[onda] Scrobbled: ${artist} — ${track} (${platform})`);
 
   scrobbleState = {
     status: "scrobbled",
@@ -115,7 +115,7 @@ async function handleScrobbleComplete({ artist, track, platform }) {
     const res = await fetch(lookupUrl);
 
     if (!res.ok) {
-      console.warn(`[Patron] Lookup failed: ${res.status}`);
+      console.warn(`[onda] Lookup failed: ${res.status}`);
       scrobbleState = { ...scrobbleState, status: "lookup_failed" };
       chrome.storage.local.set({ scrobbleState });
       return;
@@ -124,50 +124,50 @@ async function handleScrobbleComplete({ artist, track, platform }) {
     const data = await res.json();
 
     if (data.artist?.mbidHash) {
-      // Send tip on-chain
+      // Send gift on-chain
       try {
-        const tipResult = await PatronWallet.sendTip(data.artist.mbidHash);
-        console.log(`[Patron] On-chain tip tx: ${tipResult.txHash}`);
-        scrobbleState = { ...scrobbleState, status: "tipped", txHash: tipResult.txHash };
+        const giftResult = await OndaWallet.sendTip(data.artist.mbidHash);
+        console.log(`[onda] On-chain gift tx: ${giftResult.txHash}`);
+        scrobbleState = { ...scrobbleState, status: "gifted", txHash: giftResult.txHash };
 
-        // Notify dashboard so tip appears in feed
-        fetch(`${API_BASE}/api/tip`, {
+        // Notify dashboard so gift appears in feed
+        fetch(`${API_BASE}/api/gift`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             artist: data.artist.name || artist,
             track: data.track?.title || track,
             platform,
-            txHash: tipResult.txHash,
+            txHash: giftResult.txHash,
           }),
         }).catch(() => {}); // best-effort, don't block
       } catch (err) {
-        console.warn(`[Patron] Tip failed: ${err.message}`);
-        scrobbleState = { ...scrobbleState, status: "tip_failed", tipError: err.message };
+        console.warn(`[onda] Gift failed: ${err.message}`);
+        scrobbleState = { ...scrobbleState, status: "gift_failed", giftError: err.message };
       }
       chrome.storage.local.set({ scrobbleState });
     }
 
     // Store in history
-    const { tipHistory = [] } = await chrome.storage.local.get(["tipHistory"]);
+    const { giftHistory = [] } = await chrome.storage.local.get(["giftHistory"]);
 
-    tipHistory.unshift({
+    giftHistory.unshift({
       artist: data.artist?.name || artist,
       track: data.track?.title || track,
       mbid: data.artist?.mbid,
       mbidHash: data.artist?.mbidHash,
-      amount: TIP_AMOUNT,
+      amount: GIFT_AMOUNT,
       platform,
       timestamp: Date.now(),
       txHash: scrobbleState.txHash || null,
     });
 
-    if (tipHistory.length > 100) tipHistory.length = 100;
-    await chrome.storage.local.set({ tipHistory });
+    if (giftHistory.length > 100) giftHistory.length = 100;
+    await chrome.storage.local.set({ giftHistory });
 
-    console.log(`[Patron] Tip recorded: $${TIP_AMOUNT} → ${data.artist?.name || artist}`);
+    console.log(`[onda] Sent $${GIFT_AMOUNT} to ${data.artist?.name || artist}`);
   } catch (error) {
-    console.error("[Patron] Error:", error);
+    console.error("[onda] Error:", error);
     scrobbleState = { ...scrobbleState, status: "error" };
     chrome.storage.local.set({ scrobbleState });
   }
@@ -179,14 +179,14 @@ function updateBadge(text, color) {
 }
 
 async function getFullStatus() {
-  const data = await chrome.storage.local.get(["scrobbleState", "tipHistory"]);
-  const tips = data.tipHistory || [];
-  const uniqueArtists = new Set(tips.map((t) => t.artist)).size;
+  const data = await chrome.storage.local.get(["scrobbleState", "giftHistory"]);
+  const gifts = data.giftHistory || [];
+  const uniqueArtists = new Set(gifts.map((g) => g.artist)).size;
   return {
     scrobble: data.scrobbleState || scrobbleState,
-    tipCount: tips.length,
-    totalTipped: (tips.length * TIP_AMOUNT).toFixed(2),
+    giftCount: gifts.length,
+    totalGiven: (gifts.length * GIFT_AMOUNT).toFixed(2),
     uniqueArtists,
-    recentTips: tips.slice(0, 10),
+    recentGifts: gifts.slice(0, 10),
   };
 }
