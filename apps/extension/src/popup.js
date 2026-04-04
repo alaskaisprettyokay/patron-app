@@ -1,101 +1,105 @@
 // onda popup — receipt-style wallet + scrobble state + history
+import QRCode from "qrcode";
+
+// Keep the service worker alive while the popup is open (MV3 requirement).
+// Also receives LINKED messages when a Joined event is detected on-chain.
+const swPort = chrome.runtime.connect({ name: "popup" });
+swPort.onMessage.addListener((msg) => {
+  if (msg.type === "LINKED") {
+    currentlyLinked = true;
+    renderLinked(msg);
+  }
+});
 
 const platformNames = {
-  spotify: "spotify",
-  soundcloud: "soundcloud",
-  bandcamp: "bandcamp",
-  "youtube-music": "youtube music",
-  subcult: "subcult",
+  spotify: "Spotify",
+  soundcloud: "SoundCloud",
+  bandcamp: "Bandcamp",
+  "youtube-music": "YouTube Music",
 };
 
-// --- Wallet UI ---
+// --- Account / Wallet UI ---
+
+let currentlyLinked = null; // track to avoid re-rendering QR on every tick
 
 function renderWallet() {
-  const section = document.getElementById("wallet-section");
-
-  chrome.runtime.sendMessage({ type: "GET_WALLET_INFO" }, (info) => {
-    if (chrome.runtime.lastError || !info) {
-      section.innerHTML = `<div class="wallet-error">loading...</div>`;
+  chrome.runtime.sendMessage({ type: "GET_ACCOUNT_STATUS" }, (status) => {
+    if (chrome.runtime.lastError || !status) {
+      document.getElementById("wallet-section").innerHTML =
+        `<div class="wallet-error">Extension loading...</div>`;
       return;
     }
 
-    if (info.error) {
-      section.innerHTML = `
-        <div class="wallet-row">
-          <span class="wallet-label">account</span>
-          <span class="wallet-addr">${shortAddr(info.address)}</span>
-        </div>
-        <div class="wallet-error">can't reach the network right now</div>
-      `;
-      return;
+    if (!status.isLinked) {
+      // Only re-render QR if we weren't already showing it
+      if (currentlyLinked !== false) {
+        currentlyLinked = false;
+        renderOnboarding(status.sessionAddress);
+      }
+    } else {
+      if (currentlyLinked !== true) {
+        currentlyLinked = true;
+        renderLinked(status);
+      }
     }
-
-    const funded = parseFloat(info.escrowBalance) > 0;
-    const hasUsdc = parseFloat(info.usdcBalance) > 0;
-
-    section.innerHTML = `
-      <div class="label">account</div>
-      <div class="wallet-row">
-        <span class="wallet-label">address</span>
-        <span class="wallet-addr" id="wallet-addr" title="${info.address}">${shortAddr(info.address)}</span>
-      </div>
-      <div class="wallet-row">
-        <span class="wallet-label">balance</span>
-        <span class="wallet-val">$${info.usdcBalance}</span>
-      </div>
-      <div class="wallet-row">
-        <span class="wallet-label">gift balance</span>
-        <span class="wallet-val ${funded ? 'funded' : 'empty'}">$${info.escrowBalance}</span>
-      </div>
-      ${!funded && hasUsdc ? `
-        <button id="deposit-btn" class="wallet-btn">deposit $${info.usdcBalance}</button>
-      ` : ""}
-      ${!funded && !hasUsdc ? `
-        <div class="wallet-fund">
-          <div class="fund-label">send USDC (Arc) to:</div>
-          <div class="fund-addr" id="fund-addr">${info.address}</div>
-          <button id="copy-addr-btn" class="wallet-btn-sm">copy address</button>
-        </div>
-      ` : ""}
-      ${funded ? `
-        <div class="wallet-ready">ready to send gifts</div>
-      ` : ""}
-    `;
-
-    // Copy address
-    document.getElementById("copy-addr-btn")?.addEventListener("click", () => {
-      navigator.clipboard.writeText(info.address);
-      document.getElementById("copy-addr-btn").textContent = "copied";
-      setTimeout(() => {
-        const btn = document.getElementById("copy-addr-btn");
-        if (btn) btn.textContent = "copy address";
-      }, 2000);
-    });
-
-    // Copy on click wallet addr
-    document.getElementById("wallet-addr")?.addEventListener("click", () => {
-      navigator.clipboard.writeText(info.address);
-    });
-
-    // Deposit button
-    document.getElementById("deposit-btn")?.addEventListener("click", () => {
-      const btn = document.getElementById("deposit-btn");
-      btn.textContent = "approving + depositing...";
-      btn.disabled = true;
-      chrome.runtime.sendMessage({ type: "APPROVE_AND_DEPOSIT" }, (result) => {
-        if (result?.error) {
-          btn.textContent = `something went wrong`;
-          btn.disabled = false;
-        } else {
-          renderWallet();
-        }
-      });
-    });
   });
 }
 
+function renderOnboarding(sessionAddress) {
+  const section = document.getElementById("wallet-section");
+  section.innerHTML = `
+    <div class="label">Connect Wallet</div>
+    <div class="onboard-text">Scan with your wallet to activate Patron</div>
+    <div id="qr-container" class="qr-container"></div>
+    <div class="wallet-row" style="margin-top:6px">
+      <span class="wallet-label">Session</span>
+      <span class="wallet-addr">${shortAddr(sessionAddress)}</span>
+    </div>
+    <div class="onboard-hint">Keep this open — it will update once detected</div>
+  `;
+
+  // Fetch the EIP-681 URI and render the QR code
+  chrome.runtime.sendMessage({ type: "GET_JOIN_URI" }, async (uri) => {
+    if (!uri || uri.error) return;
+    const container = document.getElementById("qr-container");
+    if (!container) return;
+
+    const canvas = document.createElement("canvas");
+    try {
+      await QRCode.toCanvas(canvas, uri, {
+        width: 200,
+        margin: 2,
+        color: { dark: "#1c1917", light: "#f5f0e8" },
+      });
+      container.appendChild(canvas);
+    } catch (err) {
+      container.textContent = uri;
+    }
+  });
+}
+
+function renderLinked(status) {
+  const section = document.getElementById("wallet-section");
+  section.innerHTML = `
+    <div class="label">Account</div>
+    <div class="wallet-row">
+      <span class="wallet-label">Owner</span>
+      <span class="wallet-addr" title="${status.ownerAddress}">${shortAddr(status.ownerAddress)}</span>
+    </div>
+    <div class="wallet-row">
+      <span class="wallet-label">Smart Account</span>
+      <span class="wallet-addr" title="${status.smartAccountAddress}">${shortAddr(status.smartAccountAddress)}</span>
+    </div>
+    <div class="wallet-row">
+      <span class="wallet-label">Session</span>
+      <span class="wallet-addr" title="${status.sessionAddress}">${shortAddr(status.sessionAddress)}</span>
+    </div>
+    <div class="wallet-ready">Ready to auto-tip</div>
+  `;
+}
+
 function shortAddr(addr) {
-  if (!addr) return "--";
+  if (!addr) return "—";
   return addr.slice(0, 6) + "..." + addr.slice(-4);
 }
 
@@ -105,14 +109,14 @@ function update() {
   chrome.runtime.sendMessage({ type: "GET_STATUS" }, (response) => {
     if (!response) return;
 
-    const { scrobble, giftCount, totalGiven, recentGifts } = response;
+    const { scrobble, totalGiven, recentGifts } = response;
     const state = scrobble?.status || "idle";
 
     document.getElementById("total-given").textContent = `$${totalGiven}`;
 
     if (scrobble?.artist) {
-      document.getElementById("artist-name").textContent = scrobble.artist;
       document.getElementById("track-name").textContent = scrobble.track || "--";
+      document.getElementById("artist-name").textContent = scrobble.artist;
       document.getElementById("empty-state").style.display = "none";
 
       const badge = document.getElementById("platform-badge");
@@ -184,7 +188,7 @@ function update() {
       giftDetail.style.display = "none";
     }
 
-    // History — receipt items
+    // History
     const historySection = document.getElementById("history-section");
     const historyList = document.getElementById("history-list");
     if (recentGifts && recentGifts.length > 0) {
@@ -199,7 +203,9 @@ function update() {
             <div class="h-track">${gift.track} · ${platformNames[gift.platform] || gift.platform}</div>
           </div>
           <div class="amount">
-            ${gift.txHash ? `<a href="https://testnet.arcscan.app/tx/${gift.txHash}" target="_blank">$${gift.amount.toFixed(2)}</a>` : '$' + gift.amount.toFixed(2)}
+            ${gift.txHash
+              ? `<a href="https://testnet.arcscan.app/tx/${gift.txHash}" target="_blank">$${gift.amount.toFixed(2)}</a>`
+              : "$" + gift.amount.toFixed(2)}
           </div>
         </div>
       `
@@ -209,8 +215,8 @@ function update() {
   });
 }
 
-// Update every second
+// Poll account status every second (catches the moment join tx is detected)
+setInterval(renderWallet, 1000);
 setInterval(update, 1000);
-setInterval(renderWallet, 10000);
 update();
 renderWallet();

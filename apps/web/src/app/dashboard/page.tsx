@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import type { Address } from "viem";
-import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC } from "@/lib/contracts";
+import { USDC_ADDRESS, ERC20_ABI, formatUSDC } from "@/lib/contracts";
 import { FundExtension } from "@/components/FundExtension";
 import { GiftFeed } from "@/components/GiftFeed";
 import { WorldIDVerify } from "@/components/WorldIDVerify";
@@ -36,31 +36,23 @@ export default function DashboardPage() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
+  // extWalletAddr is the smart account address posted by the extension
   const { data: extBalance } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: ONDA_ESCROW_ABI,
-    functionName: "listenerBalance",
-    args: extWalletAddr ? [extWalletAddr] : undefined,
-    query: { enabled: !!extWalletAddr, refetchInterval: 5000 },
-  });
-
-  const { data: extTotalGiven } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: ONDA_ESCROW_ABI,
-    functionName: "totalTipped",
+    address: USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
     args: extWalletAddr ? [extWalletAddr] : undefined,
     query: { enabled: !!extWalletAddr, refetchInterval: 5000 },
   });
 
   const balance = (extBalance as bigint) || 0n;
-  const totalGiven = (extTotalGiven as bigint) || 0n;
 
   const onExtWalletDetected = useCallback((addr: string) => {
     setExtWalletAddr(addr as Address);
   }, []);
 
   const setupComplete =
-    isConnected && isHumanVerified && !!extWalletAddr && balance > 0n && totalGiven > 0n;
+    isConnected && isHumanVerified && !!extWalletAddr && balance > 0n && uniqueArtists > 0;
 
   if (!isConnected) {
     return (
@@ -79,7 +71,7 @@ export default function DashboardPage() {
       <div className="mb-12">
         <div className="text-xs uppercase tracking-widest text-ink-faint mb-2">total given</div>
         <div className="font-mono text-6xl sm:text-7xl font-bold tracking-tight text-onda leading-none">
-          ${totalGiven ? formatUSDC(totalGiven) : "0.00"}
+          ${balance ? formatUSDC(balance) : "0.00"}
         </div>
         {giftsThisWeek > 0 && (
           <div className="text-sm text-ink-faint mt-2">
@@ -146,7 +138,7 @@ export default function DashboardPage() {
             <Check done={isHumanVerified} label="verify you're human" />
             <Check done={!!extWalletAddr} label="extension detected" />
             <Check done={balance > 0n} label="add funds" />
-            <Check done={totalGiven > 0n} label="play a track" />
+            <Check done={uniqueArtists > 0} label="play a track" />
           </div>
         )}
       </div>
