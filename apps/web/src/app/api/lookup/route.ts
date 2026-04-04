@@ -15,21 +15,35 @@ export async function GET(request: NextRequest) {
     if (track) {
       // Search by artist + track
       const result = await searchRecording(artist, track);
-      if (!result) {
-        return NextResponse.json({ error: "No results found" }, { status: 404 });
+      if (result) {
+        return NextResponse.json({
+          artist: {
+            mbid: result.artist.id,
+            name: result.artist.name,
+            mbidHash: mbidToBytes32(result.artist.id),
+          },
+          track: {
+            mbid: result.recording.id,
+            title: result.recording.title,
+          },
+        });
       }
 
-      return NextResponse.json({
-        artist: {
-          mbid: result.artist.id,
-          name: result.artist.name,
-          mbidHash: mbidToBytes32(result.artist.id),
-        },
-        track: {
-          mbid: result.recording.id,
-          title: result.recording.title,
-        },
-      });
+      // Recording not found — fall back to artist-only lookup
+      const artists = await searchArtist(artist);
+      if (artists.length > 0) {
+        const a = artists[0];
+        return NextResponse.json({
+          artist: {
+            mbid: a.id,
+            name: a.name,
+            mbidHash: mbidToBytes32(a.id),
+          },
+          track: { title: track },
+        });
+      }
+
+      return NextResponse.json({ error: "No results found" }, { status: 404 });
     } else {
       // Search by artist name only
       const artists = await searchArtist(artist);
