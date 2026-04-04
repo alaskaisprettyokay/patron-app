@@ -2,6 +2,9 @@
   "name": "onda",
   "private": true,
   "description": "detect what you're listening to, send gifts directly to artists",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "cd apps/web && npm run dev",
     "build": "cd apps/web && npm run build",
