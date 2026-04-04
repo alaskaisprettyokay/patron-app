@@ -7,4 +7,5 @@ cache/
 artifacts/
 broadcast/
 *.log
+*.tsbuildinfo
 .DS_Store
