@@ -1,12 +1,24 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useReadContract } from "wagmi";
 import { getArtistDetails, getArtistUrls, type MBArtistDetails } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
 import { REGISTRY_ADDRESS, ONDA_REGISTRY_ABI } from "@/lib/contracts";
 import { formatENSName } from "@/lib/ens";
+import { fetchArtistGifts, type OnChainGift } from "@/lib/gifts";
+
+function timeAgo(ts: number): string {
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -20,6 +32,10 @@ export default function ArtistPage() {
   const [artist, setArtist] = useState<MBArtistDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [gifts, setGifts] = useState<OnChainGift[]>([]);
+  const [supporters, setSupporters] = useState(0);
+  const [giftsLoading, setGiftsLoading] = useState(true);
+  const [giftsError, setGiftsError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -31,6 +47,28 @@ export default function ArtistPage() {
       })
       .finally(() => setLoading(false));
   }, [mbid]);
+
+  // Fetch on-chain Tipped events via dedicated viem client
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchArtistGifts(mbidHash as `0x${string}`)
+      .then((data) => {
+        if (cancelled) return;
+        setGifts(data.gifts);
+        setSupporters(data.supporters);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("[onda] getLogs failed:", err);
+        setGiftsError(err?.message || "Failed to load gift history");
+      })
+      .finally(() => {
+        if (!cancelled) setGiftsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [mbidHash]);
 
   const { data: artistInfo } = useReadContract({
     address: ESCROW_ADDRESS,
@@ -52,6 +90,35 @@ export default function ArtistPage() {
     abi: ONDA_ESCROW_ABI,
     functionName: "defaultTipAmount",
   });
+
+  const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
+  const tipSize = (defaultTipAmount as bigint) || 10000n;
+  const onChainGiftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
+  const giftCount = Math.max(onChainGiftCount, gifts.length);
+  const perGift = giftCount > 0 ? Number(unclaimed) / giftCount / 1_000_000 : 0;
+
+  const activityDays = useMemo(() => {
+    const giftsWithTime = gifts.filter((g) => g.timestamp);
+    const now = new Date();
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const dayEnd = dayStart + 86400000;
+      const count = giftsWithTime.filter(
+        (g) => g.timestamp! >= dayStart && g.timestamp! < dayEnd
+      ).length;
+      days.push({
+        label: d.toLocaleDateString("en", { weekday: "short" }).toLowerCase(),
+        count,
+        isToday: i === 0,
+      });
+    }
+    return days;
+  }, [gifts]);
+
+  const maxDayCount = Math.max(...activityDays.map((d) => d.count), 1);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -81,14 +148,8 @@ export default function ArtistPage() {
   const urls = getArtistUrls(artist.relations);
   const wallet = artistInfo ? (artistInfo as [string, boolean, bigint])[0] : undefined;
   const verified = artistInfo ? (artistInfo as [string, boolean, bigint])[1] : false;
-  const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
   const isClaimed = wallet && wallet !== "0x0000000000000000000000000000000000000000";
   const ensName = subname ? formatENSName(subname as string) : null;
-
-  // Derive gift stats from on-chain state
-  const tipSize = (defaultTipAmount as bigint) || 10000n; // $0.01 in 6-decimal USDC
-  const giftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
-  const perGift = giftCount > 0 ? Number(unclaimed) / giftCount / 1_000_000 : 0;
 
   return (
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">
@@ -132,7 +193,13 @@ export default function ArtistPage() {
       <div className="grid sm:grid-cols-3 gap-6 mb-12">
         <div className="border-l-2 border-ink pl-4">
           <div className="font-mono text-2xl font-bold">{giftCount}</div>
-          <div className="text-sm text-ink-light">total gifts</div>
+          <div className="text-sm text-ink-light">gifts</div>
+        </div>
+        <div className="border-l-2 border-ink pl-4">
+          <div className="font-mono text-2xl font-bold">
+            {giftsLoading ? "..." : supporters}
+          </div>
+          <div className="text-sm text-ink-light">listeners</div>
         </div>
         <div className="border-l-2 border-ink pl-4">
           <div className="font-mono text-2xl font-bold">
@@ -140,42 +207,87 @@ export default function ArtistPage() {
           </div>
           <div className="text-sm text-ink-light">per gift</div>
         </div>
-        <div className="border-l-2 border-ink pl-4">
-          <div className="text-2xl font-bold">
-            {isClaimed && verified ? (
-              <span className="text-onda">active</span>
-            ) : isClaimed ? (
-              <span className="text-ink-light">pending</span>
-            ) : (
-              <span className="text-ink-faint">unclaimed</span>
-            )}
-          </div>
-          <div className="text-sm text-ink-light">status</div>
-        </div>
       </div>
 
-      {/* Visual — gift milestones */}
-      {giftCount > 0 && (
+      {/* Debug: show error if getLogs failed */}
+      {giftsError && (
+        <div className="mb-6 text-xs font-mono text-ink-faint border border-rule p-3">
+          gift history unavailable: {giftsError}
+        </div>
+      )}
+
+      {/* Activity chart */}
+      {gifts.some((g) => g.timestamp) && (
         <div className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">milestones</h2>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(giftCount, 50) }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-6 flex-1 max-w-[12px] ${
-                  i === giftCount - 1 ? "bg-onda" : "bg-ink/15"
-                }`}
-                title={`gift #${i + 1}`}
-              />
-            ))}
-            {giftCount > 50 && (
-              <span className="text-xs text-ink-faint ml-2 font-mono">+{giftCount - 50}</span>
-            )}
-          </div>
-          <div className="text-xs text-ink-faint mt-2">
-            {giftCount} gift{giftCount !== 1 ? "s" : ""} at ${perGift.toFixed(2)} each
+          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">activity</h2>
+          <div className="flex items-end gap-2 h-24">
+            {activityDays.map((day) => {
+              const height = maxDayCount > 0 ? (day.count / maxDayCount) * 100 : 0;
+              return (
+                <div key={day.label} className="flex-1 flex flex-col items-center gap-2">
+                  <div className="w-full flex items-end justify-center" style={{ height: "64px" }}>
+                    {day.count > 0 ? (
+                      <div
+                        className={`w-full max-w-[44px] transition-all duration-300 ${
+                          day.isToday ? "bg-onda" : "bg-ink/15"
+                        }`}
+                        style={{ height: `${Math.max(height, 6)}%` }}
+                        title={`${day.count} gift${day.count !== 1 ? "s" : ""}`}
+                      />
+                    ) : (
+                      <div className="w-full max-w-[44px] bg-rule/40" style={{ height: "2px" }} />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono ${
+                      day.isToday ? "text-onda font-bold" : "text-ink-faint"
+                    }`}
+                  >
+                    {day.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
+      )}
+
+      {/* Recent gifts */}
+      {gifts.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-4">recent</h2>
+          <div>
+            {gifts.slice(0, 15).map((gift, i) => (
+              <div
+                key={`${gift.txHash}-${i}`}
+                className="flex items-baseline justify-between py-3 border-b border-rule last:border-0"
+              >
+                <div className="min-w-0 mr-4">
+                  <span className="font-mono text-sm text-ink-light">
+                    {truncateAddress(gift.listener)}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3 shrink-0 text-sm">
+                  <a
+                    href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-onda font-bold font-mono hover:underline"
+                  >
+                    ${gift.amount}
+                  </a>
+                  {gift.timestamp && (
+                    <span className="text-ink-faint text-xs">{timeAgo(gift.timestamp)}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {giftsLoading && (
+        <div className="mb-12 text-ink-faint text-sm">loading listeners...</div>
       )}
 
       {/* Wallet (claimed artists) */}

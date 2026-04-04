@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchRecording } from "@/lib/musicbrainz";
 import { mbidToBytes32 } from "@/lib/contracts";
-
-// In-memory gift queue for demo (in production, use a database)
-const giftQueue: GiftRecord[] = [];
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
 
 interface GiftRecord {
   artist: string;
@@ -16,6 +15,35 @@ interface GiftRecord {
   timestamp: number;
   txHash: string | null;
 }
+
+// Persistent JSON store
+const DATA_DIR = join(process.cwd(), ".data");
+const GIFTS_FILE = join(DATA_DIR, "gifts.json");
+
+function loadGifts(): GiftRecord[] {
+  try {
+    if (existsSync(GIFTS_FILE)) {
+      return JSON.parse(readFileSync(GIFTS_FILE, "utf-8"));
+    }
+  } catch {
+    // corrupted file, start fresh
+  }
+  return [];
+}
+
+function saveGifts(gifts: GiftRecord[]) {
+  try {
+    if (!existsSync(DATA_DIR)) {
+      mkdirSync(DATA_DIR, { recursive: true });
+    }
+    writeFileSync(GIFTS_FILE, JSON.stringify(gifts));
+  } catch (err) {
+    console.error("Failed to persist gifts:", err);
+  }
+}
+
+// Load from disk on startup
+let giftStore: GiftRecord[] = loadGifts();
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,8 +81,9 @@ export async function POST(request: NextRequest) {
       txHash: txHash || null,
     };
 
-    giftQueue.unshift(record);
-    if (giftQueue.length > 200) giftQueue.length = 200;
+    giftStore.unshift(record);
+    if (giftStore.length > 1000) giftStore.length = 1000;
+    saveGifts(giftStore);
 
     return NextResponse.json({
       success: true,
@@ -66,6 +95,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({ gifts: giftQueue.slice(0, 50) });
+export async function GET(request: NextRequest) {
+  const mbid = request.nextUrl.searchParams.get("mbid");
+
+  if (mbid) {
+    const artistGifts = giftStore.filter((g) => g.mbid === mbid);
+    const supporters = new Set(
+      artistGifts.map((g) => g.listenerAddress).filter(Boolean)
+    ).size;
+    const tracks = new Set(artistGifts.map((g) => g.track)).size;
+
+    return NextResponse.json({
+      gifts: artistGifts.slice(0, 50),
+      total: artistGifts.length,
+      supporters,
+      tracks,
+    });
+  }
+
+  return NextResponse.json({ gifts: giftStore.slice(0, 50) });
 }
