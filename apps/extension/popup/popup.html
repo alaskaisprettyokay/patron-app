@@ -3,71 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       width: 320px;
-      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      background: #0a0a0f;
-      color: #e0e0e0;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      background: #f5f0e8;
+      color: #1c1917;
       padding: 16px;
+      font-size: 11px;
+      line-height: 1.5;
     }
+
+    /* Receipt header */
     .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
+      text-align: center;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      border-bottom: 1px dashed #c4bcb0;
     }
     .logo {
-      font-size: 18px;
+      font-size: 13px;
       font-weight: 700;
-      background: linear-gradient(135deg, #6c63ff, #a855f7);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      letter-spacing: 4px;
+      text-transform: uppercase;
     }
-    .stats {
-      font-size: 11px;
-      color: #888;
-      text-align: right;
+    .tagline {
+      font-size: 9px;
+      color: #78716c;
+      margin-top: 2px;
+      letter-spacing: 1px;
     }
-    .stats strong { color: #2ed573; }
+
+    /* Stats line */
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      color: #78716c;
+    }
+    .stats-row strong { color: #1c1917; }
+    .stats-row .accent { color: #b84a32; font-weight: 500; }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px dashed #c4bcb0;
+      margin: 8px 0;
+    }
+    .divider-solid {
+      border: none;
+      border-top: 1px solid #c4bcb0;
+      margin: 8px 0;
+    }
+
+    /* Section label */
+    .label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #a8a29e;
+      margin-bottom: 6px;
+    }
 
     /* Now Playing */
     .now-playing {
-      background: #111118;
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 12px;
-      border: 1px solid #1a1a2e;
-    }
-    .status-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #666;
-      margin-bottom: 8px;
+      padding: 8px 0;
     }
     .track-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 2px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1c1917;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .artist-name {
-      font-size: 12px;
-      color: #aaa;
-      margin-bottom: 10px;
+      font-size: 11px;
+      color: #78716c;
+      margin-top: 1px;
     }
     .platform-badge {
       display: inline-block;
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: #1a1a2e;
-      color: #6c63ff;
-      margin-bottom: 10px;
+      font-size: 9px;
+      padding: 1px 6px;
+      border: 1px solid #c4bcb0;
+      color: #78716c;
+      margin-top: 4px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
 
     /* Progress bar */
@@ -75,102 +100,169 @@
       margin-top: 8px;
     }
     .progress-bar {
-      height: 4px;
-      background: #1a1a2e;
-      border-radius: 2px;
+      height: 3px;
+      background: #d6d0c8;
       overflow: hidden;
     }
     .progress-fill {
       height: 100%;
-      border-radius: 2px;
       transition: width 0.3s ease, background-color 0.3s ease;
       width: 0%;
     }
-    .progress-fill.listening { background: linear-gradient(90deg, #6c63ff, #a855f7); }
-    .progress-fill.complete { background: #2ed573; }
+    .progress-fill.listening { background: #1c1917; }
+    .progress-fill.complete { background: #b84a32; }
     .progress-text {
       display: flex;
       justify-content: space-between;
-      font-size: 10px;
-      color: #666;
-      margin-top: 4px;
+      font-size: 9px;
+      color: #a8a29e;
+      margin-top: 3px;
     }
 
-    /* Status states */
-    .status-idle .now-playing { border-color: #1a1a2e; }
-    .status-listening .now-playing { border-color: #6c63ff33; }
-    .status-scrobbled .now-playing { border-color: #2ed57333; }
-    .status-paused .now-playing { border-color: #ffd93d33; }
-    .status-skipped .now-playing { border-color: #ff6b6b33; }
-
+    /* Tip result */
     .tip-result {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 8px;
-      font-size: 12px;
-      color: #2ed573;
+      margin-top: 6px;
+      font-size: 11px;
       font-weight: 500;
     }
-    .tip-result.escrowed { color: #ffd93d; }
+    .tip-result.paid { color: #b84a32; }
+    .tip-result.escrowed { color: #78716c; }
+    .tip-result a { color: inherit; }
 
-    /* Scrobble history */
-    .history {
-      margin-top: 4px;
-    }
-    .history-title {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #444;
-      margin-bottom: 8px;
-    }
+    /* History / receipt items */
     .history-item {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
-      border-bottom: 1px solid #111;
-      font-size: 11px;
+      align-items: baseline;
+      padding: 3px 0;
+      font-size: 10px;
     }
-    .history-item:last-child { border-bottom: none; }
-    .history-track { color: #ccc; }
-    .history-artist { color: #888; font-size: 10px; }
-    .history-amount { color: #2ed573; font-weight: 500; font-size: 11px; }
+    .history-item .track { color: #1c1917; }
+    .history-item .artist { color: #a8a29e; font-size: 9px; }
+    .history-item .amount { color: #b84a32; font-weight: 500; text-align: right; white-space: nowrap; }
+    .history-item .amount a { color: inherit; text-decoration: none; }
+    .history-item .amount a:hover { text-decoration: underline; }
 
     .empty-state {
       text-align: center;
-      padding: 24px;
-      color: #444;
-      font-size: 12px;
+      padding: 20px 0;
+      color: #a8a29e;
+      font-size: 10px;
     }
-    .empty-state .emoji { font-size: 24px; margin-bottom: 8px; }
 
+    /* Wallet section */
+    .wallet-section {
+      padding: 8px 0;
+    }
+    .wallet-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2px 0;
+    }
+    .wallet-label { color: #a8a29e; font-size: 10px; }
+    .wallet-addr {
+      color: #78716c;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .wallet-addr:hover { color: #b84a32; }
+    .wallet-val { color: #1c1917; font-weight: 500; }
+    .wallet-val.funded { color: #b84a32; }
+    .wallet-val.empty { color: #a8a29e; }
+    .wallet-btn {
+      width: 100%;
+      background: #1c1917;
+      color: #f5f0e8;
+      border: 1px solid #1c1917;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .wallet-btn:hover { background: transparent; color: #1c1917; }
+    .wallet-btn:disabled { opacity: 0.4; cursor: default; }
+    .wallet-btn-sm {
+      width: 100%;
+      background: transparent;
+      color: #78716c;
+      border: 1px solid #c4bcb0;
+      padding: 5px;
+      font-family: inherit;
+      font-size: 10px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .wallet-btn-sm:hover { border-color: #1c1917; color: #1c1917; }
+    .wallet-fund { margin-top: 6px; }
+    .fund-label { font-size: 9px; color: #a8a29e; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; }
+    .fund-addr {
+      font-size: 9px;
+      color: #78716c;
+      word-break: break-all;
+      background: #ebe4d8;
+      padding: 6px;
+      border: 1px solid #c4bcb0;
+    }
+    .wallet-ready {
+      text-align: center;
+      color: #b84a32;
+      font-size: 10px;
+      font-weight: 500;
+      margin-top: 6px;
+    }
+    .wallet-error { color: #b84a32; font-size: 10px; }
+
+    /* Footer */
     .footer {
-      margin-top: 12px;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed #c4bcb0;
       text-align: center;
     }
     .footer a {
-      font-size: 11px;
-      color: #6c63ff;
+      font-size: 9px;
+      color: #a8a29e;
       text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
+    .footer a:hover { color: #1c1917; }
   </style>
 </head>
 <body>
   <div class="header">
-    <span class="logo">🎵 Patron</span>
-    <div class="stats">
-      <div><strong id="total-tipped">$0.00</strong> tipped</div>
-      <div id="tip-count">0 scrobbles</div>
-    </div>
+    <div class="logo">Patron</div>
+    <div class="tagline">direct music micropayments</div>
   </div>
 
-  <div id="app" class="status-idle">
+  <div class="stats-row">
+    <span>Total tipped</span>
+    <strong class="accent" id="total-tipped">$0.00</strong>
+  </div>
+  <div class="stats-row">
+    <span>Scrobbles</span>
+    <strong id="tip-count">0</strong>
+  </div>
+
+  <hr class="divider">
+
+  <div id="wallet-section" class="wallet-section">
+    <!-- Filled by JS -->
+  </div>
+
+  <hr class="divider">
+
+  <div id="app">
+    <div class="label">Now playing</div>
     <div class="now-playing">
-      <div class="status-label" id="status-label">Waiting for music...</div>
       <div class="track-name" id="track-name">—</div>
       <div class="artist-name" id="artist-name">Play something to get started</div>
+      <div id="platform-badge" style="display: none;"></div>
       <div class="progress-container" id="progress-container" style="display: none;">
         <div class="progress-bar">
           <div class="progress-fill listening" id="progress-fill"></div>
@@ -183,19 +275,19 @@
       <div class="tip-result" id="tip-result" style="display: none;"></div>
     </div>
 
-    <div class="history" id="history-section" style="display: none;">
-      <div class="history-title">Recent Scrobbles</div>
+    <div id="history-section" style="display: none;">
+      <hr class="divider">
+      <div class="label">Recent</div>
       <div id="history-list"></div>
     </div>
 
     <div class="empty-state" id="empty-state">
-      <div class="emoji">🎧</div>
-      Play music on Spotify, SoundCloud, Bandcamp, or YouTube Music
+      Play music on Spotify, SoundCloud,<br>Bandcamp, or YouTube Music
     </div>
   </div>
 
   <div class="footer">
-    <a href="http://localhost:3000/dashboard" target="_blank">Open Dashboard →</a>
+    <a href="http://localhost:3000/dashboard" target="_blank">Open dashboard</a>
   </div>
 
   <script src="popup.js"></script>
