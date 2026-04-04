@@ -58,7 +58,7 @@ function renderOnboarding(sessionAddress) {
     <div class="onboard-hint">Keep this open — it will update once detected</div>
   `;
 
-  // Fetch the EIP-681 URI and render the QR code
+  // Fetch the join URI and render QR + clickable link
   chrome.runtime.sendMessage({ type: "GET_JOIN_URI" }, async (uri) => {
     if (!uri || uri.error) return;
     const container = document.getElementById("qr-container");
@@ -75,6 +75,14 @@ function renderOnboarding(sessionAddress) {
     } catch (err) {
       container.textContent = uri;
     }
+
+    const link = document.createElement("a");
+    link.href = uri;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "open in browser →";
+    link.className = "qr-link";
+    container.appendChild(link);
   });
 }
 
