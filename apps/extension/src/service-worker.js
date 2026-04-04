@@ -1,6 +1,6 @@
 // onda service worker — handles scrobble + gift signing flow
 
-import { initSession, getAccountStatus, getJoinUri, checkForJoin, watchForJoin, signTip } from "./wallet.js";
+import { initSession, getAccountStatus, getJoinUri, checkForJoin, watchForJoin, signTip, getSmartAccountBalance } from "./wallet.js";
 
 const API_BASE = process.env.PATRON_WEB_URL || "http://localhost:3000";
 const GIFT_AMOUNT = 10000; // 0.01 USDC in 6 decimals // 0.01 USDC in 6 decimals
@@ -102,9 +102,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (!status.isLinked && status.sessionAddress) {
           const found = await checkForJoin();
           if (found) {
-            sendResponse({ ...status, ...found, isLinked: true });
+            const usdcBalance = await getSmartAccountBalance();
+            sendResponse({ ...status, ...found, isLinked: true, usdcBalance });
             return;
           }
+        }
+        if (status.isLinked) {
+          const usdcBalance = await getSmartAccountBalance();
+          sendResponse({ ...status, usdcBalance });
+          return;
         }
         sendResponse(status);
       });
@@ -158,13 +164,13 @@ async function handleScrobbleComplete({ artist, track, platform }) {
         const giftRes = await fetch(`${API_BASE}/api/relay`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            artist: lookupData.artist.name || artist,
-            track: lookupData.track?.title || track,
-            platform,
-            ...giftPayload,
-          }),
+          body: JSON.stringify(giftPayload),
         });
+
+        if (!giftRes.ok) {
+          const err = await giftRes.json().catch(() => ({}));
+          throw new Error(err.error || `Relay error ${giftRes.status}`);
+        }
 
         const giftResult = await giftRes.json();
         console.log(`[onda] Gift submitted:`, giftResult);
@@ -180,21 +186,31 @@ async function handleScrobbleComplete({ artist, track, platform }) {
       chrome.storage.local.set({ scrobbleState });
     }
 
-    // Store in history
+    const artistName = lookupData.artist?.name || artist;
+    const trackName = lookupData.track?.title || track;
+    const txHash = scrobbleState.txHash || null;
+
+    // Store in local history (shown in extension popup)
     const { giftHistory = [] } = await chrome.storage.local.get(["giftHistory"]);
     giftHistory.unshift({
-      artist: lookupData.artist?.name || artist,
-      track: lookupData.track?.title || track,
+      artist: artistName,
+      track: trackName,
       mbid: lookupData.artist?.mbid,
       mbidHash: lookupData.artist?.mbidHash,
       amount: GIFT_AMOUNT / 1e6,
       platform,
       timestamp: Date.now(),
-      txHash: scrobbleState.txHash || null,
+      txHash,
     });
-
     if (giftHistory.length > 100) giftHistory.length = 100;
     await chrome.storage.local.set({ giftHistory });
+
+    // Also record in web app's persistent gift store (feeds artist pages + dashboard)
+    fetch(`${API_BASE}/api/gift`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artist: artistName, track: trackName, platform, txHash }),
+    }).catch(() => {/* best-effort */});
   } catch (error) {
     console.error("[onda] Error:", error);
     scrobbleState = { ...scrobbleState, status: "error" };

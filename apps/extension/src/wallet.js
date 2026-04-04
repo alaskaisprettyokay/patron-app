@@ -52,6 +52,18 @@ const SMART_ACCOUNT_ABI = [
   },
 ];
 
+const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
+
+const ERC20_ABI = [
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+];
+
 function getPublicClient() {
   return createPublicClient({ chain: ARC_TESTNET, transport: http() });
 }
@@ -157,6 +169,26 @@ export async function watchForJoin(onLinked) {
   });
 
   return unwatch;
+}
+
+/// Returns the USDC balance (as a string in display units) of the smart account.
+export async function getSmartAccountBalance() {
+  const { smartAccountAddress } = await chrome.storage.local.get(["smartAccountAddress"]);
+  if (!smartAccountAddress) return null;
+  try {
+    const publicClient = getPublicClient();
+    const raw = await publicClient.readContract({
+      address: USDC_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: [smartAccountAddress],
+    });
+    // USDC has 6 decimals on Arc
+    return (Number(raw) / 1e6).toFixed(2);
+  } catch (err) {
+    console.warn("[onda] getSmartAccountBalance failed:", err);
+    return null;
+  }
 }
 
 // --- Tip signing ---

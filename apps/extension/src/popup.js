@@ -80,6 +80,7 @@ function renderOnboarding(sessionAddress) {
 
 function renderLinked(status) {
   const section = document.getElementById("wallet-section");
+  const balanceDisplay = status.usdcBalance != null ? `$${status.usdcBalance}` : "…";
   section.innerHTML = `
     <div class="label">Account</div>
     <div class="wallet-row">
@@ -93,6 +94,10 @@ function renderLinked(status) {
     <div class="wallet-row">
       <span class="wallet-label">Session</span>
       <span class="wallet-addr" title="${status.sessionAddress}">${shortAddr(status.sessionAddress)}</span>
+    </div>
+    <div class="wallet-row">
+      <span class="wallet-label">Balance</span>
+      <span class="wallet-addr">${balanceDisplay} USDC</span>
     </div>
     <div class="wallet-ready">Ready to auto-tip</div>
   `;

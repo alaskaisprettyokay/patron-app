@@ -2,12 +2,16 @@
 // Content scripts can talk to both the page (postMessage) and the service worker (runtime.sendMessage)
 
 function sendWalletToPage() {
-  chrome.runtime.sendMessage({ type: "GET_WALLET_INFO" }, (info) => {
-    if (chrome.runtime.lastError) return;
+  chrome.runtime.sendMessage({ type: "GET_ACCOUNT_STATUS" }, (status) => {
+    if (chrome.runtime.lastError || !status) return;
+    // Forward smart account address as the "wallet" the dashboard funds
+    const wallet = status.smartAccountAddress
+      ? { address: status.smartAccountAddress, usdcBalance: "0", escrowBalance: "0" }
+      : null;
     window.postMessage({
       type: "ONDA_WALLET_INFO",
       extensionId: chrome.runtime.id,
-      wallet: info || null,
+      wallet,
     }, "*");
   });
 }
@@ -44,10 +48,4 @@ window.addEventListener("message", (event) => {
     sendStatusToPage();
   }
 
-  if (event.data?.type === "ONDA_APPROVE_AND_DEPOSIT") {
-    chrome.runtime.sendMessage({ type: "APPROVE_AND_DEPOSIT" }, (result) => {
-      if (chrome.runtime.lastError) return;
-      window.postMessage({ type: "ONDA_DEPOSIT_RESULT", result }, "*");
-    });
-  }
 });
