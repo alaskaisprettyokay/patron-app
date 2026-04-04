@@ -30,13 +30,11 @@ export function GiftFeed() {
         setGifts(event.data.status.recentGifts);
       }
     };
-
     window.addEventListener("message", handler);
     window.postMessage({ type: "ONDA_REQUEST_STATUS" }, "*");
     const interval = setInterval(() => {
       window.postMessage({ type: "ONDA_REQUEST_STATUS" }, "*");
     }, 5000);
-
     return () => {
       window.removeEventListener("message", handler);
       clearInterval(interval);
@@ -52,15 +50,15 @@ export function GiftFeed() {
   }
 
   return (
-    <div className="divide-y divide-rule font-mono text-xs">
+    <div className="font-mono text-xs">
       {gifts.slice(0, 10).map((gift, i) => (
         <div
           key={`${gift.timestamp}-${i}`}
-          className="flex items-baseline justify-between py-2"
+          className="flex items-baseline justify-between py-1.5 border-b border-rule/50 last:border-0"
         >
-          <div className="min-w-0 mr-3">
-            <span className="font-medium text-sm">{gift.artist}</span>
-            <span className="text-ink-faint ml-2">{gift.track}</span>
+          <div className="min-w-0 mr-4">
+            <span className="font-bold text-sm">{gift.artist}</span>
+            <span className="text-ink-faint ml-2 text-2xs">{gift.track}</span>
           </div>
           <div className="flex items-baseline gap-2 shrink-0">
             {gift.txHash ? (
@@ -68,7 +66,7 @@ export function GiftFeed() {
                 href={`https://testnet.arcscan.app/tx/${gift.txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-onda hover:underline font-medium"
+                className="text-onda hover:underline font-bold"
               >
                 ${gift.amount?.toFixed(2) || "0.01"}
               </a>

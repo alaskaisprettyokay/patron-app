@@ -28,9 +28,9 @@ export default function RootLayout({
       <body className="min-h-screen">
         <Providers>
           <nav className="border-b border-rule">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6">
-              <div className="flex justify-between items-center h-11">
-                <a href="/" className="font-mono text-sm font-bold lowercase">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+              <div className="flex justify-between items-center h-12">
+                <a href="/" className="font-mono text-base font-bold">
                   onda
                 </a>
                 <div className="flex items-center gap-5">

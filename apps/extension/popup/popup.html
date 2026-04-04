@@ -9,25 +9,36 @@
     body {
       width: 320px;
       font-family: 'JetBrains Mono', 'Courier New', monospace;
-      background: #f4efe6;
-      color: #1a1816;
-      padding: 14px 16px;
+      background: #f0eae0;
+      color: #151311;
+      padding: 0;
       font-size: 10px;
       line-height: 1.4;
-      /* Subtle grain */
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+      /* Grain texture */
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
     }
 
-    /* Receipt header */
+    /* Ink header — inverted top bar */
     .header {
-      padding-bottom: 8px;
-      margin-bottom: 6px;
-      border-bottom: 1px dashed #bfb8ad;
+      background: #151311;
+      color: #f0eae0;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
     }
     .logo {
       font-size: 14px;
       font-weight: 700;
-      letter-spacing: 0.3px;
+    }
+    .header-stats {
+      font-size: 9px;
+      color: #c4813a;
+      font-weight: 500;
+    }
+
+    .body-content {
+      padding: 12px 16px;
     }
 
     /* Stats line */
@@ -35,54 +46,60 @@
       display: flex;
       justify-content: space-between;
       padding: 1px 0;
-      color: #9c958e;
+      color: #8a847d;
       font-size: 9px;
-      letter-spacing: 0.5px;
     }
-    .stats-row strong { color: #1a1816; }
-    .stats-row .accent { color: #b5894c; font-weight: 500; }
+    .stats-row strong { color: #151311; }
+    .stats-row .accent { color: #c4813a; font-weight: 700; }
 
-    /* Divider */
+    /* Divider — dashed receipt style */
     .divider {
       border: none;
-      border-top: 1px dashed #bfb8ad;
-      margin: 6px 0;
+      height: 1px;
+      margin: 8px 0;
+      background-image: repeating-linear-gradient(
+        to right,
+        #b5ad9f 0, #b5ad9f 4px,
+        transparent 4px, transparent 8px
+      );
     }
 
     /* Section label */
     .label {
       font-size: 8px;
-      letter-spacing: 1.5px;
-      color: #9c958e;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #8a847d;
       margin-bottom: 5px;
     }
 
     /* Now Playing */
     .now-playing {
-      padding: 6px 0;
+      padding: 4px 0;
     }
     .artist-name {
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 700;
-      color: #1a1816;
+      color: #151311;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      line-height: 1.2;
+      line-height: 1.15;
     }
     .track-name {
       font-size: 10px;
-      color: #6b6560;
-      margin-top: 1px;
+      color: #5c5650;
+      margin-top: 2px;
     }
     .platform-badge {
       display: inline-block;
-      font-size: 8px;
-      padding: 1px 5px;
-      border: 1px solid #d2cbc2;
-      color: #9c958e;
+      font-size: 7px;
+      padding: 2px 5px;
+      border: 1px solid #cdc5b8;
+      color: #8a847d;
       margin-top: 4px;
-      letter-spacing: 0.8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
 
     /* Progress bar */
@@ -91,7 +108,7 @@
     }
     .progress-bar {
       height: 2px;
-      background: #d2cbc2;
+      background: #cdc5b8;
       overflow: hidden;
     }
     .progress-fill {
@@ -99,13 +116,13 @@
       transition: width 0.3s ease, background-color 0.3s ease;
       width: 0%;
     }
-    .progress-fill.listening { background: #1a1816; }
-    .progress-fill.complete { background: #b5894c; }
+    .progress-fill.listening { background: #151311; }
+    .progress-fill.complete { background: #c4813a; }
     .progress-text {
       display: flex;
       justify-content: space-between;
       font-size: 8px;
-      color: #9c958e;
+      color: #8a847d;
       margin-top: 2px;
     }
 
@@ -113,48 +130,49 @@
     .gift-result {
       margin-top: 5px;
       font-size: 10px;
-      font-weight: 500;
+      font-weight: 700;
     }
-    .gift-result.sent { color: #b5894c; }
-    .gift-result.escrowed { color: #6b6560; }
+    .gift-result.sent { color: #c4813a; }
+    .gift-result.escrowed { color: #5c5650; }
     .gift-result a { color: inherit; }
 
-    /* Gift detail lines */
+    /* Gift detail */
     .gift-detail {
       font-size: 9px;
-      color: #6b6560;
+      color: #5c5650;
       margin-top: 3px;
       line-height: 1.5;
     }
-    .gift-detail .diamond { color: #b5894c; }
+    .gift-detail .diamond { color: #c4813a; font-weight: 700; }
 
     /* History / receipt items */
     .history-item {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      padding: 2px 0;
-      font-size: 9px;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(205, 197, 184, 0.4);
     }
+    .history-item:last-child { border-bottom: none; }
     .history-item .h-artist {
-      color: #1a1816;
-      font-weight: 500;
-      font-size: 10px;
+      color: #151311;
+      font-weight: 700;
+      font-size: 11px;
     }
-    .history-item .h-track { color: #9c958e; font-size: 8px; }
-    .history-item .amount { color: #b5894c; font-weight: 500; text-align: right; white-space: nowrap; }
+    .history-item .h-track { color: #8a847d; font-size: 8px; }
+    .history-item .amount { color: #c4813a; font-weight: 700; text-align: right; white-space: nowrap; }
     .history-item .amount a { color: inherit; text-decoration: none; }
     .history-item .amount a:hover { text-decoration: underline; }
 
     .empty-state {
-      padding: 16px 0;
-      color: #9c958e;
+      padding: 12px 0;
+      color: #8a847d;
       font-size: 9px;
     }
 
     /* Wallet section */
     .wallet-section {
-      padding: 4px 0;
+      padding: 2px 0;
     }
     .wallet-row {
       display: flex;
@@ -163,22 +181,22 @@
       padding: 1px 0;
       font-size: 9px;
     }
-    .wallet-label { color: #9c958e; }
+    .wallet-label { color: #8a847d; }
     .wallet-addr {
-      color: #6b6560;
+      color: #5c5650;
       cursor: pointer;
       font-size: 9px;
     }
-    .wallet-addr:hover { color: #b5894c; }
-    .wallet-val { color: #1a1816; font-weight: 500; }
-    .wallet-val.funded { color: #b5894c; }
-    .wallet-val.empty { color: #9c958e; }
+    .wallet-addr:hover { color: #c4813a; }
+    .wallet-val { color: #151311; font-weight: 500; }
+    .wallet-val.funded { color: #c4813a; font-weight: 700; }
+    .wallet-val.empty { color: #8a847d; }
     .wallet-btn {
       width: 100%;
-      background: #1a1816;
-      color: #f4efe6;
-      border: 1px solid #1a1816;
-      padding: 6px;
+      background: #151311;
+      color: #f0eae0;
+      border: none;
+      padding: 7px;
       font-family: inherit;
       font-size: 9px;
       font-weight: 600;
@@ -186,102 +204,110 @@
       margin-top: 6px;
       letter-spacing: 0.8px;
     }
-    .wallet-btn:hover { background: transparent; color: #1a1816; }
+    .wallet-btn:hover { background: #c4813a; }
     .wallet-btn:disabled { opacity: 0.3; cursor: default; }
     .wallet-btn-sm {
       width: 100%;
       background: transparent;
-      color: #6b6560;
-      border: 1px solid #d2cbc2;
+      color: #5c5650;
+      border: 1px solid #cdc5b8;
       padding: 4px;
       font-family: inherit;
       font-size: 8px;
       cursor: pointer;
       margin-top: 4px;
     }
-    .wallet-btn-sm:hover { border-color: #1a1816; color: #1a1816; }
+    .wallet-btn-sm:hover { border-color: #151311; color: #151311; }
     .wallet-fund { margin-top: 5px; }
-    .fund-label { font-size: 8px; color: #9c958e; margin-bottom: 2px; letter-spacing: 0.8px; }
+    .fund-label { font-size: 8px; color: #8a847d; margin-bottom: 2px; letter-spacing: 0.8px; text-transform: uppercase; }
     .fund-addr {
       font-size: 8px;
-      color: #6b6560;
+      color: #5c5650;
       word-break: break-all;
-      background: #eae3d6;
+      background: #e5ded2;
       padding: 5px;
-      border: 1px solid #d2cbc2;
+      border: 1px solid #cdc5b8;
       line-height: 1.4;
     }
     .wallet-ready {
-      color: #b5894c;
-      font-size: 9px;
-      font-weight: 500;
+      display: inline-block;
+      color: #c4813a;
+      font-size: 8px;
+      font-weight: 700;
       margin-top: 5px;
+      border: 2px solid #c4813a;
+      padding: 2px 6px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transform: rotate(-1deg);
     }
-    .wallet-error { color: #b5894c; font-size: 9px; }
+    .wallet-error { color: #c4813a; font-size: 9px; }
 
     /* Footer */
     .footer {
-      margin-top: 8px;
-      padding-top: 6px;
-      border-top: 1px dashed #bfb8ad;
+      padding: 8px 16px;
+      border-top: 1px solid #cdc5b8;
     }
     .footer a {
       font-size: 8px;
-      color: #9c958e;
+      color: #8a847d;
       text-decoration: none;
       letter-spacing: 0.8px;
     }
-    .footer a:hover { color: #1a1816; }
+    .footer a:hover { color: #151311; }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo">onda</div>
+    <div class="header-stats" id="total-given">$0.00</div>
   </div>
 
-  <div class="stats-row">
-    <span>total given</span>
-    <strong class="accent" id="total-given">$0.00</strong>
-  </div>
-  <div class="stats-row">
-    <span>tracks</span>
-    <strong id="gift-count">0</strong>
-  </div>
+  <div class="body-content">
+    <div class="stats-row">
+      <span>total given</span>
+      <strong class="accent" id="total-given-detail">$0.00</strong>
+    </div>
+    <div class="stats-row">
+      <span>tracks</span>
+      <strong id="gift-count">0</strong>
+    </div>
 
-  <hr class="divider">
+    <hr class="divider">
 
-  <div id="wallet-section" class="wallet-section">
-    <!-- Filled by JS -->
-  </div>
+    <div id="wallet-section" class="wallet-section">
+      <!-- Filled by JS -->
+    </div>
 
-  <hr class="divider">
+    <hr class="divider">
 
-  <div id="app">
-    <div class="label">now listening</div>
-    <div class="now-playing">
-      <div class="artist-name" id="artist-name">--</div>
-      <div class="track-name" id="track-name">play something to get started</div>
-      <div id="platform-badge" style="display: none;"></div>
-      <div class="progress-container" id="progress-container" style="display: none;">
-        <div class="progress-bar">
-          <div class="progress-fill listening" id="progress-fill"></div>
+    <div id="app">
+      <div class="label">now listening</div>
+      <div class="now-playing">
+        <div class="artist-name" id="artist-name">--</div>
+        <div class="track-name" id="track-name">play something to get started</div>
+        <div id="platform-badge" style="display: none;"></div>
+        <div class="progress-container" id="progress-container" style="display: none;">
+          <div class="progress-bar">
+            <div class="progress-fill listening" id="progress-fill"></div>
+          </div>
+          <div class="progress-text">
+            <span id="progress-time">0s</span>
+            <span id="progress-target">10s</span>
+          </div>
         </div>
-        <div class="progress-text">
-          <span id="progress-time">0s</span>
-          <span id="progress-target">10s</span>
-        </div>
+        <div class="gift-result" id="gift-result" style="display: none;"></div>
+        <div class="gift-detail" id="gift-detail" style="display: none;"></div>
       </div>
-      <div class="gift-result" id="gift-result" style="display: none;"></div>
-      <div class="gift-detail" id="gift-detail" style="display: none;"></div>
-    </div>
 
-    <div id="history-section" style="display: none;">
-      <hr class="divider">
-      <div class="label">recent</div>
-      <div id="history-list"></div>
-    </div>
+      <div id="history-section" style="display: none;">
+        <hr class="divider">
+        <div class="label">recent</div>
+        <div id="history-list"></div>
+      </div>
 
-    <div class="empty-state" id="empty-state">
+      <div class="empty-state" id="empty-state">
+      </div>
     </div>
   </div>
 

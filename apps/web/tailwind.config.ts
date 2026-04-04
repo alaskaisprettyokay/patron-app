@@ -6,23 +6,23 @@ const config: Config = {
     extend: {
       colors: {
         paper: {
-          DEFAULT: "#f4efe6",
-          dark: "#eae3d6",
-          darker: "#ddd5c5",
+          DEFAULT: "#f0eae0",
+          dark: "#e5ded2",
+          darker: "#d8cfbf",
         },
         ink: {
-          DEFAULT: "#1a1816",
-          light: "#6b6560",
-          faint: "#9c958e",
+          DEFAULT: "#151311",
+          light: "#5c5650",
+          faint: "#8a847d",
         },
         rule: {
-          DEFAULT: "#d2cbc2",
-          dark: "#bfb8ad",
+          DEFAULT: "#cdc5b8",
+          dark: "#b5ad9f",
         },
         onda: {
-          DEFAULT: "#b5894c",
-          muted: "rgba(181, 137, 76, 0.10)",
-          faint: "rgba(181, 137, 76, 0.06)",
+          DEFAULT: "#c4813a",
+          muted: "rgba(196, 129, 58, 0.15)",
+          faint: "rgba(196, 129, 58, 0.07)",
         },
       },
       fontFamily: {
@@ -30,10 +30,12 @@ const config: Config = {
         mono: ["JetBrains Mono", "Courier New", "monospace"],
       },
       fontSize: {
-        "2xs": ["0.65rem", { lineHeight: "1.2" }],
+        "2xs": ["0.625rem", { lineHeight: "1.2" }],
+        "display": ["3.5rem", { lineHeight: "0.95", letterSpacing: "-0.03em" }],
+        "headline": ["2rem", { lineHeight: "1.0", letterSpacing: "-0.02em" }],
       },
       letterSpacing: {
-        receipt: "0.12em",
+        receipt: "0.15em",
       },
     },
   },

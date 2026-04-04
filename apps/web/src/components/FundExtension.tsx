@@ -25,7 +25,6 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return;
-
       if (event.data?.type === "ONDA_WALLET_INFO") {
         setDetected(true);
         if (event.data.wallet?.address) {
@@ -34,14 +33,11 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
         }
       }
     };
-
     window.addEventListener("message", handler);
     window.postMessage({ type: "ONDA_REQUEST_WALLET_INFO" }, "*");
-
     const interval = setInterval(() => {
       window.postMessage({ type: "ONDA_REQUEST_WALLET_INFO" }, "*");
     }, 10000);
-
     return () => {
       window.removeEventListener("message", handler);
       clearInterval(interval);
@@ -64,20 +60,16 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
 
   if (!detected) {
     return (
-      <div className="card mb-6">
-        <div className="section-label mb-1.5">extension</div>
-        <p className="text-xs text-ink-light">
-          extension not detected. install onda for Chrome and refresh.
-        </p>
+      <div className="my-6 font-mono text-xs text-ink-faint">
+        extension not detected. install onda for Chrome and refresh.
       </div>
     );
   }
 
   if (!extWallet) {
     return (
-      <div className="card mb-6">
-        <div className="section-label mb-1.5">extension</div>
-        <p className="text-xs text-ink-light">connecting...</p>
+      <div className="my-6 font-mono text-xs text-ink-faint">
+        connecting to extension...
       </div>
     );
   }
@@ -86,16 +78,14 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
   const hasUsdc = parseFloat(extWallet.usdcBalance || "0") > 0;
 
   return (
-    <div className="card mb-6">
+    <div className="my-6">
       <div className="section-label mb-3">extension account</div>
-
-      <div className="space-y-1.5 mb-3 font-mono text-xs">
+      <div className="font-mono text-xs space-y-1 mb-3">
         <div className="flex justify-between">
           <span className="text-ink-faint">address</span>
           <span
-            className="text-ink-light cursor-pointer hover:text-onda break-all text-right max-w-[200px]"
+            className="text-ink-light cursor-pointer hover:text-onda"
             onClick={() => navigator.clipboard.writeText(extWallet.address)}
-            title="click to copy"
           >
             {extWallet.address.slice(0, 10)}...{extWallet.address.slice(-6)}
           </span>
@@ -106,56 +96,51 @@ export function FundExtension({ onWalletDetected }: { onWalletDetected?: (addres
         </div>
         <div className="flex justify-between">
           <span className="text-ink-faint">gift balance</span>
-          <span className={funded ? "text-onda font-medium" : "text-ink-light"}>
+          <span className={funded ? "text-onda font-bold" : "text-ink-light"}>
             ${extWallet.escrowBalance}
           </span>
         </div>
       </div>
 
       {funded ? (
-        <div className="text-onda text-xs font-mono font-medium">
-          ready to send gifts
+        <div className="stamp text-onda border-onda">
+          ready
         </div>
       ) : hasUsdc ? (
-        <div className="text-ink-light text-xs">
+        <p className="text-ink-light text-xs font-mono">
           funds received. click deposit in the extension popup.
-        </div>
+        </p>
       ) : isConnected && !sent ? (
-        <div className="space-y-2.5">
-          <div className="text-xs text-ink-light">
-            add funds from your connected account:
-          </div>
-          <div className="flex gap-1.5 items-center flex-wrap">
-            {[1, 5, 10, 20].map((preset) => (
-              <button
-                key={preset}
-                onClick={() => setAmount(String(preset))}
-                className={`px-2.5 py-1 text-2xs font-mono font-medium border transition-colors ${
-                  amount === String(preset)
-                    ? "border-ink bg-ink text-paper"
-                    : "border-rule text-ink-light hover:border-ink-light"
-                }`}
-              >
-                ${preset}
-              </button>
-            ))}
+        <div className="flex gap-1.5 items-center flex-wrap">
+          {[1, 5, 10, 20].map((preset) => (
             <button
-              onClick={handleSend}
-              disabled={isPending || isConfirming}
-              className="btn-primary text-2xs px-3 py-1"
+              key={preset}
+              onClick={() => setAmount(String(preset))}
+              className={`px-3 py-1.5 text-xs font-mono font-medium border transition-all ${
+                amount === String(preset)
+                  ? "border-ink bg-ink text-paper"
+                  : "border-rule text-ink-light hover:border-ink"
+              }`}
             >
-              {isConfirming ? "confirming..." : isPending ? "confirm in wallet..." : `send $${amount}`}
+              ${preset}
             </button>
-          </div>
+          ))}
+          <button
+            onClick={handleSend}
+            disabled={isPending || isConfirming}
+            className="btn-primary text-xs px-4 py-1.5"
+          >
+            {isConfirming ? "confirming..." : isPending ? "confirm in wallet..." : `send $${amount}`}
+          </button>
         </div>
       ) : sent ? (
-        <div className="text-onda text-xs font-mono font-medium">
-          funds sent. click deposit in the extension popup.
+        <div className="stamp text-onda border-onda">
+          funded
         </div>
       ) : (
-        <div className="text-xs text-ink-light">
+        <p className="text-xs text-ink-light font-mono">
           sign in above, then add funds.
-        </div>
+        </p>
       )}
     </div>
   );

@@ -109,6 +109,7 @@ function update() {
     const state = scrobble?.status || "idle";
 
     document.getElementById("total-given").textContent = `$${totalGiven}`;
+    document.getElementById("total-given-detail").textContent = `$${totalGiven}`;
     document.getElementById("gift-count").textContent = `${giftCount}`;
 
     if (scrobble?.artist) {
@@ -163,7 +164,7 @@ function update() {
       progressContainer.style.display = "block";
       progressFill.className = "progress-fill";
       progressFill.style.width = "100%";
-      progressFill.style.background = "#b5894c";
+      progressFill.style.background = "#c4813a";
       giftResult.style.display = "block";
       giftResult.className = "gift-result";
       giftResult.textContent = scrobble.giftError || "couldn't send this one";
