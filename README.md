@@ -143,13 +143,6 @@ NEXT_PUBLIC_USDC_ADDRESS=0x...
 NEXT_PUBLIC_CHAIN_ID=5042002
 ```
 
-## Prize Categories
-
-- **Arc** ($6K) — USDC nanopayments per listen on Arc L1
-- **World ID** ($8K) — Proof-of-human for listener verification
-- **ENS** ($5K) — artist.patron.eth subname registry
-- **Unlink** ($3K) — Private tipping mode on Base Sepolia
-- **WalletConnect** ($4K) — WalletConnect Pay for deposits
 
 ## License
 
