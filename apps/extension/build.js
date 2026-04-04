@@ -7,7 +7,7 @@ const config = {
   bundle: true,
   outfile: "background/wallet.bundle.js",
   format: "iife",
-  globalName: "PatronWallet",
+  globalName: "OndaWallet",
   platform: "browser",
   target: "chrome110",
   minify: !watch,

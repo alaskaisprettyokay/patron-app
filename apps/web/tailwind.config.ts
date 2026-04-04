@@ -6,21 +6,21 @@ const config: Config = {
     extend: {
       colors: {
         paper: {
-          DEFAULT: "#f5f0e8",
-          dark: "#ebe4d8",
+          DEFAULT: "#f0eae0",
+          dark: "#e5ded2",
         },
         ink: {
-          DEFAULT: "#1c1917",
-          light: "#78716c",
-          faint: "#a8a29e",
+          DEFAULT: "#151311",
+          light: "#5c5650",
+          faint: "#8a847d",
         },
         rule: {
-          DEFAULT: "#d6d0c8",
-          dark: "#c4bcb0",
+          DEFAULT: "#cdc5b8",
+          dark: "#b5ad9f",
         },
-        accent: {
-          DEFAULT: "#b84a32",
-          muted: "rgba(184, 74, 50, 0.12)",
+        onda: {
+          DEFAULT: "#c4813a",
+          muted: "rgba(196, 129, 58, 0.15)",
         },
       },
       fontFamily: {

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Patron \u2014 Music Micropayments",
+  "name": "onda",
   "version": "0.1.0",
-  "description": "Auto-tip artists when you listen to music. Detects tracks on Spotify, SoundCloud, Bandcamp, YouTube Music, and Subcult.",
+  "description": "Detect what you're listening to. Send gifts directly to artists.",
   "permissions": [
     "storage",
     "tabs",
@@ -70,7 +70,7 @@
         "http://localhost:3000/*"
       ],
       "js": [
-        "content/patron-bridge.js"
+        "content/onda-bridge.js"
       ],
       "run_at": "document_idle"
     }

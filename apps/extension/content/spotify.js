@@ -1,4 +1,4 @@
-// Patron Content Script — Spotify (open.spotify.com)
+// onda content script — Spotify (open.spotify.com)
 
 (function () {
   const SCROBBLE_THRESHOLD = 10000; // 10s for demo (30s for production)

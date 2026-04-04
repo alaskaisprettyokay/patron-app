@@ -161,14 +161,14 @@ export async function approveAndDeposit() {
   const walletClient = getWalletClient(data.walletKey);
 
   // Check USDC balance
-  console.log("[Patron] approveAndDeposit: checking balance...");
+  console.log("[onda] approveAndDeposit: checking balance...");
   const usdcBalance = await publicClient.readContract({
     address: USDC_ADDRESS,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [data.walletAddress],
   });
-  console.log("[Patron] USDC balance:", usdcBalance.toString());
+  console.log("[onda] USDC balance:", usdcBalance.toString());
 
   if (usdcBalance === 0n) throw new Error("No USDC balance to deposit");
 
@@ -177,7 +177,7 @@ export async function approveAndDeposit() {
   const GAS_RESERVE = 100000n; // $0.10 in 6 decimals
   const depositAmount = usdcBalance > GAS_RESERVE ? usdcBalance - GAS_RESERVE : 0n;
   if (depositAmount === 0n) throw new Error("Balance too low (need >$0.10 for gas reserve)");
-  console.log("[Patron] Depositing:", depositAmount.toString(), "(reserving gas)");
+  console.log("[onda] Depositing:", depositAmount.toString(), "(reserving gas)");
 
   // Check allowance
   const allowance = await publicClient.readContract({
@@ -186,11 +186,11 @@ export async function approveAndDeposit() {
     functionName: "allowance",
     args: [data.walletAddress, ESCROW_ADDRESS],
   });
-  console.log("[Patron] Current allowance:", allowance.toString());
+  console.log("[onda] Current allowance:", allowance.toString());
 
   // Approve if needed
   if (allowance < depositAmount) {
-    console.log("[Patron] Sending approve tx...");
+    console.log("[onda] Sending approve tx...");
     try {
       const approveTx = await walletClient.writeContract({
         address: USDC_ADDRESS,
@@ -198,17 +198,17 @@ export async function approveAndDeposit() {
         functionName: "approve",
         args: [ESCROW_ADDRESS, depositAmount],
       });
-      console.log("[Patron] Approve tx sent:", approveTx);
+      console.log("[onda] Approve tx sent:", approveTx);
       await publicClient.waitForTransactionReceipt({ hash: approveTx });
-      console.log("[Patron] Approve confirmed");
+      console.log("[onda] Approve confirmed");
     } catch (err) {
-      console.error("[Patron] Approve failed:", err);
+      console.error("[onda] Approve failed:", err);
       throw new Error(`Approve failed: ${err.shortMessage || err.message}`);
     }
   }
 
   // Deposit all USDC into escrow
-  console.log("[Patron] Sending deposit tx...");
+  console.log("[onda] Sending deposit tx...");
   try {
     const depositTx = await walletClient.writeContract({
       address: ESCROW_ADDRESS,
@@ -216,12 +216,12 @@ export async function approveAndDeposit() {
       functionName: "deposit",
       args: [depositAmount],
     });
-    console.log("[Patron] Deposit tx sent:", depositTx);
+    console.log("[onda] Deposit tx sent:", depositTx);
     await publicClient.waitForTransactionReceipt({ hash: depositTx });
-    console.log("[Patron] Deposit confirmed");
+    console.log("[onda] Deposit confirmed");
     return { txHash: depositTx, amount: formatUnits(depositAmount, 6) };
   } catch (err) {
-    console.error("[Patron] Deposit failed:", err);
+    console.error("[onda] Deposit failed:", err);
     throw new Error(`Deposit failed: ${err.shortMessage || err.message}`);
   }
 }

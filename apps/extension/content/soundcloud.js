@@ -1,4 +1,4 @@
-// Patron Content Script — SoundCloud (soundcloud.com)
+// onda content script — SoundCloud (soundcloud.com)
 
 (function () {
   const SCROBBLE_THRESHOLD = 10000;

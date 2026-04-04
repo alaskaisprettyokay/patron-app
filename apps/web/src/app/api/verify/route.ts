@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (url) {
       try {
         const res = await fetch(url, {
-          headers: { "User-Agent": "PatronVerifier/0.1.0" },
+          headers: { "User-Agent": "OndaVerifier/0.1.0" },
         });
         const html = await res.text();
 
