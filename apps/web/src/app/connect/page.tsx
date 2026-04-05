@@ -31,7 +31,7 @@ function FundSection({ smartAccount }: { smartAccount: `0x${string}` }) {
         <span className="label">Smart account</span>
         <code className="address">{smartAccount}</code>
       </div>
-      <p className="hint">Send USDC to your smart account so Patron can auto-tip artists.</p>
+      <p className="hint">Send USDC to your smart account so Onda can auto-tip artists.</p>
 
       {isSuccess ? (
         <div className="success">
@@ -114,16 +114,16 @@ function ConnectInner() {
     return (
       <div className="card">
         <h1>Invalid link</h1>
-        <p>This link is missing a valid session key. Open the Patron extension and try again.</p>
+        <p>This link is missing a valid session key. Open the Onda extension and try again.</p>
       </div>
     );
   }
 
   return (
     <div className="card">
-      <h1>Connect your wallet to Patron</h1>
+      <h1>Connect your wallet to Onda</h1>
       <p className="subtitle">
-        This links your wallet to the Patron browser extension so it can sign tips on your behalf.
+        This links your wallet to the Onda browser extension so it can sign tips on your behalf.
       </p>
 
       <div className="session-row">
