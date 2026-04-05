@@ -51,7 +51,7 @@ export default function ArtistPage() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchArtistGifts(mbidHash as `0x${string}`)
+    fetchArtistGifts(mbidHash as `0x${string}`, mbid)
       .then((data) => {
         if (cancelled) return;
         setGifts(data.gifts);

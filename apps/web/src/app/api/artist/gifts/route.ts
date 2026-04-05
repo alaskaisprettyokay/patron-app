@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, http, parseAbiItem, formatUnits } from "viem";
+import { createPublicClient, http, formatUnits } from "viem";
 import { mbidToBytes32 } from "@/lib/contracts";
+import { HypersyncClient, Query, Event } from "@envio-dev/hypersync-client";
+
 
 const ARC_RPC = "https://rpc.testnet.arc.network";
 const ESCROW_ADDRESS = process.env.NEXT_PUBLIC_PATRON_ESCROW_ADDRESS as `0x${string}`;
+const HYPERSYNC_BEARER_TOKEN = process.env.HYPERSYNC_BEARER_TOKEN;
 
 const arcTestnet = {
   id: 5042002,
@@ -18,6 +21,10 @@ const client = createPublicClient({
 });
 
 export async function GET(request: NextRequest) {
+  if (!HYPERSYNC_BEARER_TOKEN) {
+    return NextResponse.json({ error: "Hypersync not configured" }, { status: 503 });
+  }
+
   const mbid = request.nextUrl.searchParams.get("mbid");
   if (!mbid) {
     return NextResponse.json({ error: "mbid required" }, { status: 400 });
@@ -25,31 +32,58 @@ export async function GET(request: NextRequest) {
 
   const mbidHash = mbidToBytes32(mbid);
 
+  const envio = new HypersyncClient({
+    url: "https://arc-testnet.hypersync.xyz",
+    apiToken: HYPERSYNC_BEARER_TOKEN,
+    maxNumRetries: 0,
+  });
+
+  const TippedEventHash = '0xdd409f4d8b52105a6673ade3e542f3c8e7cb0985917387804f6620413c683792';
+
+  const query: Query = {
+    fromBlock: 0,
+    logs: [
+      {
+        address: [ESCROW_ADDRESS],
+        topics: [
+          [TippedEventHash],
+          [],
+          [mbidHash]
+        ]
+      },
+    ],
+    fieldSelection: {
+      log: [
+        'BlockNumber',
+        'TransactionHash',
+        'LogIndex',
+        'Topic0',
+        'Topic1',
+        'Topic2',
+        'Data',
+      ],
+    },
+  };
+
+
   try {
-    const logs = await client.getLogs({
-      address: ESCROW_ADDRESS,
-      event: parseAbiItem(
-        "event Tipped(address indexed listener, bytes32 indexed mbidHash, uint256 amount)"
-      ),
-      args: { mbidHash },
-      fromBlock: 0n,
-      toBlock: "latest",
-    });
+    const logs = await envio.getEvents(query);
 
     // Get timestamps for each log
     const gifts = await Promise.all(
-      logs.map(async (log) => {
+      logs.data.map(async (e: Event, _i, _n) => {
+        const log = e.log;
         let timestamp: number | null = null;
         try {
-          const block = await client.getBlock({ blockNumber: log.blockNumber! });
+          const block = await client.getBlock({ blockNumber: BigInt(log.blockNumber!) });
           timestamp = Number(block.timestamp) * 1000;
         } catch {
           // skip
         }
 
         return {
-          listener: log.args.listener as string,
-          amount: formatUnits(log.args.amount as bigint, 6),
+          listener: `0x${String(log.topics[0]).slice(-40)}`,
+          amount: formatUnits(BigInt(String(log.data).slice(0, 64)), 6),
           txHash: log.transactionHash,
           blockNumber: Number(log.blockNumber),
           timestamp,

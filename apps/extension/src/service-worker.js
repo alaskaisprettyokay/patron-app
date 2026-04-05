@@ -204,13 +204,6 @@ async function handleScrobbleComplete({ artist, track, platform }) {
     });
     if (giftHistory.length > 100) giftHistory.length = 100;
     await chrome.storage.local.set({ giftHistory });
-
-    // Also record in web app's persistent gift store (feeds artist pages + dashboard)
-    fetch(`${API_BASE}/api/gift`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ artist: artistName, track: trackName, platform, txHash }),
-    }).catch(() => {/* best-effort */});
   } catch (error) {
     console.error("[onda] Error:", error);
     scrobbleState = { ...scrobbleState, status: "error" };

@@ -1,6 +1,9 @@
 // onda popup — receipt-style wallet + scrobble state + history
 import QRCode from "qrcode";
 
+document.getElementById("dashboard-link").href =
+  `${process.env.PATRON_WEB_URL}/dashboard`;
+
 // Keep the service worker alive while the popup is open (MV3 requirement).
 // Also receives LINKED messages when a Joined event is detected on-chain.
 const swPort = chrome.runtime.connect({ name: "popup" });

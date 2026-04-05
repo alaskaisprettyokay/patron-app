@@ -14,7 +14,7 @@ const arcTestnet = {
 } as const;
 
 // Server-side relayer account — needs USDC for gas on Arc Testnet
-const RELAY_KEY = (process.env.RELAYER_PRIVATE_KEY || process.env.RELAY_PRIVATE_KEY) as `0x${string}` | undefined;
+const RELAY_KEY = process.env.RELAYER_PRIVATE_KEY;
 
 export async function POST(request: NextRequest) {
   if (!RELAY_KEY) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const relayer = privateKeyToAccount(RELAY_KEY);
+    const relayer = privateKeyToAccount(RELAY_KEY as `0x${string}`);
 
     const walletClient = createWalletClient({
       account: relayer,
