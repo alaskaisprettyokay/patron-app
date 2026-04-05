@@ -17,9 +17,9 @@ export default function Home() {
           onda lets you give them $0.01 directly.
         </p>
         <div className="flex gap-3">
-          <Link href="/dashboard" className="btn-primary">
-            start listening
-          </Link>
+          <a href="/onda-extension.zip" download className="btn-primary">
+            install extension
+          </a>
           <Link href="/claim" className="btn-secondary">
             i'm an artist
           </Link>
@@ -87,13 +87,20 @@ export default function Home() {
                 it watches what you listen to and sends a gift to every artist.
                 you don't have to do anything. just listen.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-6">
                 {["Spotify", "SoundCloud", "Bandcamp", "YouTube Music"].map((p) => (
                   <span key={p} className="text-xs border border-rule px-3 py-1.5 hover:border-ink transition-colors">
                     {p}
                   </span>
                 ))}
               </div>
+              <a
+                href="/onda-extension.zip"
+                download
+                className="text-sm font-bold border border-ink px-5 py-2.5 hover:bg-ink hover:text-paper transition-all"
+              >
+                download extension .zip
+              </a>
             </div>
             {/* Mini popup mock */}
             <div className="w-[240px] shrink-0 border border-rule bg-paper-dark shadow-[6px_6px_0_0_rgba(21,19,17,0.06)]">
