@@ -15,7 +15,8 @@
     "https://music.youtube.com/*",
     "https://app.subcult.music/*",
     "http://localhost:3000/*",
-    "https://onda-tau.vercel.app/*"
+    "https://onda-tau.vercel.app/*",
+    "https://onda.eth.pm/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -78,6 +79,15 @@
     {
       "matches": [
         "https://onda-tau.vercel.app/*"
+      ],
+      "js": [
+        "content/onda-bridge.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://onda.eth.pm/*"
       ],
       "js": [
         "content/onda-bridge.js"

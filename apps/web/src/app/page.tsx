@@ -16,10 +16,10 @@ export default function Home() {
           Spotify sends artists $0.003 per stream.
           onda lets you give them $0.01 directly.
         </p>
-        <div className="flex gap-3">
-          <Link href="/dashboard" className="btn-primary">
-            start listening
-          </Link>
+        <div className="flex gap-3 flex-wrap">
+          <a href="/onda.zip" download className="btn-primary">
+            download extension
+          </a>
           <Link href="/claim" className="btn-secondary">
             i'm an artist
           </Link>
@@ -87,6 +87,9 @@ export default function Home() {
                 it watches what you listen to and sends a gift to every artist.
                 you don't have to do anything. just listen.
               </p>
+              <a href="/onda.zip" download className="btn-primary inline-block mb-5">
+                download extension
+              </a>
               <div className="flex flex-wrap gap-2">
                 {["Spotify", "SoundCloud", "Bandcamp", "YouTube Music"].map((p) => (
                   <span key={p} className="text-xs border border-rule px-3 py-1.5 hover:border-ink transition-colors">
@@ -146,9 +149,14 @@ export default function Home() {
           add some funds and onda handles the rest.
           every artist you listen to gets something.
         </p>
-        <Link href="/dashboard" className="btn-primary">
-          get started
-        </Link>
+        <div className="flex gap-3">
+          <a href="/onda.zip" download className="btn-primary">
+            download extension
+          </a>
+          <Link href="/dashboard" className="btn-secondary">
+            get started
+          </Link>
+        </div>
       </section>
 
       {/* Footer */}
