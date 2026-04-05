@@ -6,13 +6,19 @@ import { ESCROW_ADDRESS, ONDA_ESCROW_ABI } from "@/lib/contracts";
 
 export async function POST(request: NextRequest) {
   try {
-    const { mbidHash, label } = await request.json();
+    const { mbidHash, label, artist, signature } = await request.json();
 
     if (!mbidHash) {
       return NextResponse.json({ error: "mbidHash is required" }, { status: 400 });
     }
     if (!label) {
       return NextResponse.json({ error: "label is required" }, { status: 400 });
+    }
+    if (!artist) {
+      return NextResponse.json({ error: "artist is required" }, { status: 400 });
+    }
+    if (!signature) {
+      return NextResponse.json({ error: "signature is required" }, { status: 400 });
     }
 
     // Check relayer key is configured
@@ -21,48 +27,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Relayer not configured" }, { status: 500 });
     }
 
+    const account = privateKeyToAccount(relayerKey as `0x${string}`);
     const publicClient = createPublicClient({
       chain: arcTestnet,
       transport: http(),
     });
-
-    // Check on-chain state: artist must have called claimArtist first
-    const artistInfo = await publicClient.readContract({
-      address: ESCROW_ADDRESS,
-      abi: ONDA_ESCROW_ABI,
-      functionName: "getArtistInfo",
-      args: [mbidHash as `0x${string}`],
-    }) as [string, boolean, bigint];
-
-    const [wallet, verified, unclaimed] = artistInfo;
-
-    if (wallet === "0x0000000000000000000000000000000000000000") {
-      return NextResponse.json({ error: "Artist has not called claimArtist yet" }, { status: 400 });
-    }
-
-    if (verified) {
-      return NextResponse.json({
-        success: true,
-        alreadyVerified: true,
-        wallet,
-        message: "Artist is already verified.",
-      });
-    }
-
-    // Create relayer wallet client
-    const account = privateKeyToAccount(relayerKey as `0x${string}`);
     const walletClient = createWalletClient({
       account,
       chain: arcTestnet,
       transport: http(),
     });
 
-    // Call verifyAndRelease on the escrow contract
     const txHash = await walletClient.writeContract({
       address: ESCROW_ADDRESS,
       abi: ONDA_ESCROW_ABI,
       functionName: "verifyAndRelease",
-      args: [mbidHash as `0x${string}`, label as string],
+      args: [mbidHash as `0x${string}`, label as string, artist as `0x${string}`, signature as `0x${string}`],
     });
 
     await publicClient.waitForTransactionReceipt({ hash: txHash });
@@ -70,8 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       txHash,
-      wallet,
-      unclaimedReleased: unclaimed.toString(),
+      wallet: artist,
       message: "Artist verified and funds released.",
     });
   } catch (error: any) {

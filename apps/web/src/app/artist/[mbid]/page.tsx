@@ -33,6 +33,7 @@ export default function ArtistPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [gifts, setGifts] = useState<OnChainGift[]>([]);
   const [supporters, setSupporters] = useState(0);
+  const [totalUSDC, setTotalUSDC] = useState("0.00");
   const [giftsLoading, setGiftsLoading] = useState(true);
   const [giftsError, setGiftsError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -56,6 +57,7 @@ export default function ArtistPage() {
         if (cancelled) return;
         setGifts(data.gifts);
         setSupporters(data.supporters);
+        setTotalUSDC(data.totalUSDC ?? "0.00");
       })
       .catch((err) => {
         if (cancelled) return;
@@ -77,17 +79,9 @@ export default function ArtistPage() {
     query: { refetchInterval: 10000 },
   });
 
-  const { data: defaultTipAmount } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: ONDA_ESCROW_ABI,
-    functionName: "defaultTipAmount",
-  });
-
   const unclaimed = artistInfo ? (artistInfo as [string, boolean, bigint])[2] : 0n;
-  const tipSize = (defaultTipAmount as bigint) || 10000n;
-  const onChainGiftCount = unclaimed > 0n ? Number(unclaimed / tipSize) : 0;
-  const giftCount = Math.max(onChainGiftCount, gifts.length);
-  const perGift = giftCount > 0 ? Number(unclaimed) / giftCount / 1_000_000 : 0;
+  const giftCount = gifts.length;
+  const perGift = giftCount > 0 ? parseFloat(totalUSDC) / giftCount : 0;
 
   const activityDays = useMemo(() => {
     const giftsWithTime = gifts.filter((g) => g.timestamp);
@@ -174,7 +168,7 @@ export default function ArtistPage() {
       <div className="mb-12">
         <div className="text-xs uppercase tracking-widest text-ink-faint mb-2">gifts received</div>
         <div className="font-mono text-6xl sm:text-7xl font-bold tracking-tight text-onda leading-none">
-          ${unclaimed ? formatUSDC(unclaimed as bigint) : "0.00"}
+          ${totalUSDC}
         </div>
         <div className="text-sm text-ink-light mt-2">
           {isClaimed ? "claimed" : "waiting for artist to claim"}

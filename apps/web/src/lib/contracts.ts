@@ -23,14 +23,6 @@ export const PATRON_ESCROW_ABI = [
     ],
     outputs: [],
   },
-  // --- Artist self-service ---
-  {
-    name: "claimArtist",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "mbidHash", type: "bytes32" }],
-    outputs: [],
-  },
   {
     name: "verifyAndRelease",
     type: "function",
@@ -38,6 +30,8 @@ export const PATRON_ESCROW_ABI = [
     inputs: [
       { name: "mbidHash", type: "bytes32" },
       { name: "label", type: "string" },
+      { name: "artist", type: "address" },
+      { name: "signature", type: "bytes" },
     ],
     outputs: [],
   },

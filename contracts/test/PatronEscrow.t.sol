@@ -14,7 +14,10 @@ contract PatronEscrowTest is Test {
     address owner = address(this);
     address listener = address(0x1);
     address listener2 = address(0x3);
-    address artist = address(0x2);
+
+    uint256 constant ARTIST_PRIV_KEY =
+        0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+    address artist;
 
     bytes32 mbidHash = keccak256("test-mbid-1234");
     bytes32 otherMbid = keccak256("other-mbid");
@@ -32,6 +35,18 @@ contract PatronEscrowTest is Test {
         escrow = new PatronEscrow(address(usdc));
         sessionKeyAddr = vm.addr(SESSION_PRIV_KEY);
         sessionKeyAddr2 = vm.addr(SESSION_PRIV_KEY_2);
+        artist = vm.addr(ARTIST_PRIV_KEY);
+    }
+
+    function _signArtistClaim(bytes32 _mbidHash, string memory _label)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes32 digest = keccak256(abi.encodePacked(_mbidHash, _label));
+        bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ARTIST_PRIV_KEY, ethHash);
+        return abi.encodePacked(r, s, v);
     }
 
     // --- Helpers ---
@@ -158,9 +173,8 @@ contract PatronEscrowTest is Test {
     }
 
     function testTipWithSignatureVerifiedArtist() public {
-        vm.prank(artist);
-        escrow.claimArtist(mbidHash);
-        escrow.verifyAndRelease(mbidHash, subname);
+        bytes memory artistSig = _signArtistClaim(mbidHash, subname);
+        escrow.verifyAndRelease(mbidHash, subname, artist, artistSig);
 
         PatronSmartAccount smartAccount = _join();
         _fund(smartAccount, 10e6);
@@ -280,48 +294,63 @@ contract PatronEscrowTest is Test {
     }
 
     // =========================================================================
-    // claimArtist / verifyAndRelease (self-service path)
+    // verifyAndRelease (signature-based, claim + verify + release in one call)
     // =========================================================================
-
-    function testClaimArtist() public {
-        vm.prank(artist);
-        escrow.claimArtist(mbidHash);
-        assertEq(escrow.artistWallet(mbidHash), artist);
-    }
-
-    function testClaimArtistAlreadyClaimedReverts() public {
-        vm.prank(artist);
-        escrow.claimArtist(mbidHash);
-
-        vm.prank(address(0x4));
-        vm.expectRevert("Already claimed");
-        escrow.claimArtist(mbidHash);
-    }
 
     function testVerifyAndRelease() public {
         _tipUnclaimed(mbidHash, 1e6);
 
-        vm.prank(artist);
-        escrow.claimArtist(mbidHash);
-        escrow.verifyAndRelease(mbidHash, subname);
+        bytes memory artistSig = _signArtistClaim(mbidHash, subname);
+        escrow.verifyAndRelease(mbidHash, subname, artist, artistSig);
 
+        assertEq(escrow.artistWallet(mbidHash), artist);
         assertTrue(escrow.isVerified(mbidHash));
         assertEq(escrow.unclaimedBalance(mbidHash), 0);
         assertEq(usdc.balanceOf(artist), 1e6);
     }
 
+    function testVerifyAndReleaseAlreadyVerifiedReverts() public {
+        bytes memory artistSig = _signArtistClaim(mbidHash, subname);
+        escrow.verifyAndRelease(mbidHash, subname, artist, artistSig);
+
+        vm.expectRevert("Already verified");
+        escrow.verifyAndRelease(mbidHash, subname, artist, artistSig);
+    }
+
+    function testVerifyAndReleaseWrongSignatureReverts() public {
+        // Sign with listener's key instead of artist's
+        bytes32 digest = keccak256(abi.encodePacked(mbidHash, subname));
+        bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(SESSION_PRIV_KEY, ethHash);
+        bytes memory badSig = abi.encodePacked(r, s, v);
+
+        vm.expectRevert("Invalid signature");
+        escrow.verifyAndRelease(mbidHash, subname, artist, badSig);
+    }
+
+    function testVerifyAndReleaseDifferentWalletReverts() public {
+        // First: artist A claims the mbid
+        bytes memory artistSig = _signArtistClaim(mbidHash, subname);
+        escrow.verifyAndRelease(mbidHash, subname, artist, artistSig);
+
+        // Second: artist B has a valid sig but the slot is already taken by artist A
+        uint256 artistBKey = 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;
+        address artistB = vm.addr(artistBKey);
+        bytes32 digest = keccak256(abi.encodePacked(mbidHash, subname));
+        bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(artistBKey, ethHash);
+        bytes memory artistBSig = abi.encodePacked(r, s, v);
+
+        vm.expectRevert("Already verified");
+        escrow.verifyAndRelease(mbidHash, subname, artistB, artistBSig);
+    }
+
     function testVerifyAndReleaseNotOwnerReverts() public {
-        vm.prank(artist);
-        escrow.claimArtist(mbidHash);
+        bytes memory artistSig = _signArtistClaim(mbidHash, subname);
 
         vm.prank(listener);
         vm.expectRevert();
-        escrow.verifyAndRelease(mbidHash, subname);
-    }
-
-    function testVerifyAndReleaseNotClaimedReverts() public {
-        vm.expectRevert("Not claimed");
-        escrow.verifyAndRelease(mbidHash, subname);
+        escrow.verifyAndRelease(mbidHash, subname, artist, artistSig);
     }
 
     // =========================================================================

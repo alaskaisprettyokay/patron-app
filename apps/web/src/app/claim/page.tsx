@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { useState } from "react";
+import { useAccount, useSignMessage } from "wagmi";
+import { keccak256, encodePacked } from "viem";
 import { searchArtist, getArtistDetails, getArtistUrls, type MBArtist } from "@/lib/musicbrainz";
-import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, mbidToBytes32, formatUSDC } from "@/lib/contracts";
+import { mbidToBytes32, formatUSDC } from "@/lib/contracts";
 import { artistToSubname, formatENSName } from "@/lib/ens";
 import { WorldIDVerify } from "@/components/WorldIDVerify";
 
@@ -30,21 +31,7 @@ export default function ClaimPage() {
   const [worldIdVerifying, setWorldIdVerifying] = useState(false);
   const [error, setError] = useState("");
 
-  const { writeContract, data: claimHash } = useWriteContract();
-  const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash });
-
-  const { refetch: fetchArtistWallet } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: ONDA_ESCROW_ABI,
-    functionName: "artistWallet",
-    args: selectedArtist ? [mbidToBytes32(selectedArtist.id)] : undefined,
-    query: { enabled: false },
-  });
-
-  // Auto-release once claimArtist is confirmed — no extra click needed
-  useEffect(() => {
-    if (claimConfirmed) handleRelease();
-  }, [claimConfirmed]);
+  const { signMessageAsync } = useSignMessage();
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -189,45 +176,30 @@ export default function ClaimPage() {
     if (!selectedArtist || !address) return;
     setError("");
 
-    // Check if already claimed before submitting
-    const { data: existingWallet } = await fetchArtistWallet();
-    const zero = "0x0000000000000000000000000000000000000000";
-    if (existingWallet && existingWallet !== zero) {
-      if ((existingWallet as string).toLowerCase() === address.toLowerCase()) {
-        // Already claimed by this wallet — skip straight to release
-        handleRelease();
-      } else {
-        setError("this artist has already been claimed by a different wallet.");
-      }
-      return;
-    }
-
-    writeContract(
-      {
-        address: ESCROW_ADDRESS,
-        abi: ONDA_ESCROW_ABI,
-        functionName: "claimArtist",
-        args: [mbidToBytes32(selectedArtist.id)],
-      },
-      { onError: (err) => setError(err.message) }
-    );
-  };
-
-  const handleRelease = async () => {
-    if (!selectedArtist) return;
-    setStep("releasing");
-    setError("");
     try {
+      // Artist signs their claim — no on-chain tx required
+      const mbidHash = mbidToBytes32(selectedArtist.id);
+      const label = artistToSubname(selectedArtist.name);
+      const digest = keccak256(encodePacked(["bytes32", "string"], [mbidHash, label]));
+      const signature = await signMessageAsync({ message: { raw: digest } });
+
+      setStep("releasing");
+
       const res = await fetch("/api/claim/release", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mbidHash: mbidToBytes32(selectedArtist.id), label: artistToSubname(selectedArtist.name) }),
+        body: JSON.stringify({ mbidHash, label, artist: address, signature }),
       });
       const data = await res.json();
       if (data.success) { setReleaseResult(data); setStep("done"); }
       else { setError(data.error || "something went wrong."); setStep("claim"); }
-    } catch {
-      setError("couldn't reach the server.");
+    } catch (err: any) {
+      // User rejected signature or network error
+      if (err?.code === 4001 || err?.name === "UserRejectedRequestError") {
+        setError("signature rejected.");
+      } else {
+        setError(err?.shortMessage || err?.message || "couldn't reach the server.");
+      }
       setStep("claim");
     }
   };
@@ -479,8 +451,8 @@ export default function ClaimPage() {
               </div>
             </div>
           </div>
-          <button onClick={handleClaim} className="btn-primary w-full" disabled={!!claimHash || claimConfirmed}>
-            {claimHash ? "confirming..." : "claim profile"}
+          <button onClick={handleClaim} className="btn-primary w-full">
+            claim profile
           </button>
         </div>
       )}

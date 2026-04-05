@@ -88,15 +88,16 @@ export async function GET(request: NextRequest) {
           BigInt(`0x${String(log.data).replace(/^0x/, "").slice(0, 64)}`),
           6
         ),
-        txHash: log.transactionHash,
+        txHash: log.transaction_hash,
         blockNumber: log.blockNumber,
         timestamp: blockTimestamps.get(log.blockNumber) ?? null,
       }))
       .reverse();
 
     const supporters = new Set(gifts.map((g) => g.listener.toLowerCase())).size;
+    const totalUSDC = gifts.reduce((sum, g) => sum + parseFloat(g.amount), 0).toFixed(2);
 
-    return NextResponse.json({ gifts, total: gifts.length, supporters });
+    return NextResponse.json({ gifts, total: gifts.length, supporters, totalUSDC });
   } catch (error: any) {
     console.error("Failed to fetch artist gift logs:", error?.message || error);
     return NextResponse.json({ gifts: [], total: 0, supporters: 0, error: error?.message });

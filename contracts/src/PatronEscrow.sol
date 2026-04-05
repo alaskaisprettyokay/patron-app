@@ -100,37 +100,48 @@ contract PatronEscrow is Ownable {
         emit Tipped(smartAccount, mbidHash, amount, nonce);
     }
 
-    // --- Artist self-service claim ---
+    /// @notice Called by the relayer after off-chain verification.
+    ///         The artist signs (mbidHash ‖ label) off-chain — no on-chain tx required from them.
+    ///         Claims the artist slot, verifies, releases escrowed tips, and mints their onda.eth subname.
+    /// @param mbidHash  keccak256 of the artist's MusicBrainz ID.
+    /// @param label     ENS label to mint, e.g. "radiohead" for "radiohead.onda.eth".
+    /// @param artist    The artist's wallet address (must match ecrecover of signature).
+    /// @param signature EIP-191 personal_sign of keccak256(mbidHash ‖ label).
+    function verifyAndRelease(
+        bytes32 mbidHash,
+        string calldata label,
+        address artist,
+        bytes calldata signature
+    ) external onlyOwner {
+        // Verify artist signed their claim intent
+        bytes32 digest = keccak256(abi.encodePacked(mbidHash, label));
+        bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(digest);
+        address signer = ECDSA.recover(ethHash, signature);
+        require(signer == artist, "Invalid signature");
 
-    function claimArtist(bytes32 mbidHash) external {
-        // Known issue: this can be frontrun by non-artist and Deny service. Should add a signature. We're running out of time tho.
-        require(artistWallet[mbidHash] == address(0), "Already claimed");
-        artistWallet[mbidHash] = msg.sender;
-        emit ArtistClaimed(mbidHash, msg.sender);
-    }
-
-    /// @notice Called by owner after off-chain verification.
-    ///         Releases escrowed tips and mints the artist's onda.eth subname.
-    /// @param mbidHash keccak256 of the artist's MusicBrainz ID.
-    /// @param label    ENS label to mint, e.g. "radiohead" for "radiohead.onda.eth".
-    function verifyAndRelease(bytes32 mbidHash, string calldata label) external onlyOwner {
-        require(artistWallet[mbidHash] != address(0), "Not claimed");
         require(!isVerified[mbidHash], "Already verified");
-        isVerified[mbidHash] = true;
 
-        address wallet = artistWallet[mbidHash];
+        // Register artist wallet (allow idempotent re-submission by same wallet)
+        if (artistWallet[mbidHash] == address(0)) {
+            artistWallet[mbidHash] = artist;
+            emit ArtistClaimed(mbidHash, artist);
+        } else {
+            require(artistWallet[mbidHash] == artist, "Already claimed by different wallet");
+        }
+
+        isVerified[mbidHash] = true;
 
         uint256 balance = unclaimedBalance[mbidHash];
         if (balance > 0) {
             unclaimedBalance[mbidHash] = 0;
-            usdc.transfer(wallet, balance);
+            usdc.transfer(artist, balance);
         }
 
         if (address(ondaRegistrar) != address(0)) {
-            ondaRegistrar.register(label, wallet);
+            ondaRegistrar.register(label, artist);
         }
 
-        emit ArtistVerified(mbidHash, wallet);
+        emit ArtistVerified(mbidHash, artist);
     }
 
     // --- Admin ---

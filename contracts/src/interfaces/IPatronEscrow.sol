@@ -11,12 +11,6 @@ interface IPatronEscrow {
     function artistWallet(bytes32 mbidHash) external view returns (address);
     function isVerified(bytes32 mbidHash) external view returns (bool);
     function unclaimedBalance(bytes32 mbidHash) external view returns (uint256);
-    function artistSubname(bytes32 mbidHash) external view returns (string memory);
-    function subnameMbid(string calldata subname) external view returns (bytes32);
-    function textRecords(bytes32 mbidHash, string calldata key)
-        external
-        view
-        returns (string memory);
     function defaultTipAmount() external view returns (uint256);
 
     // --- Account management ---
@@ -32,16 +26,12 @@ interface IPatronEscrow {
     ) external;
 
     // --- Artist registry ---
-    function claimArtist(bytes32 mbidHash) external;
-    function verifyAndRelease(bytes32 mbidHash) external;
-    function registerArtist(bytes32 mbidHash, string calldata subname, address wallet) external;
-    function setSubname(bytes32 mbidHash, string calldata subname) external;
-    function resolveSubname(string calldata subname) external view returns (address);
-    function setTextRecord(bytes32 mbidHash, string calldata key, string calldata value) external;
-    function getTextRecord(bytes32 mbidHash, string calldata key)
-        external
-        view
-        returns (string memory);
+    function verifyAndRelease(
+        bytes32 mbidHash,
+        string calldata label,
+        address artist,
+        bytes calldata signature
+    ) external;
     function getArtistInfo(bytes32 mbidHash)
         external
         view
@@ -49,4 +39,5 @@ interface IPatronEscrow {
 
     // --- Admin ---
     function setDefaultTipAmount(uint256 amount) external;
+    function setOndaRegistrar(address registrar) external;
 }

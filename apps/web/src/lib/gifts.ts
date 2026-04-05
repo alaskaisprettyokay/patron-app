@@ -10,6 +10,7 @@ export interface ArtistGiftData {
   gifts: OnChainGift[];
   supporters: number;
   total: number;
+  totalUSDC: string;
 }
 
 export async function fetchArtistGifts(
@@ -18,7 +19,7 @@ export async function fetchArtistGifts(
 ): Promise<ArtistGiftData> {
   const res = await fetch(`/api/artist/gifts?mbid=${encodeURIComponent(mbid)}`);
   if (!res.ok) {
-    return { gifts: [], supporters: 0, total: 0 };
+    return { gifts: [], supporters: 0, total: 0, totalUSDC: "0.00" };
   }
   return res.json();
 }
