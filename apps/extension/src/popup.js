@@ -49,7 +49,8 @@ function renderOnboarding(sessionAddress) {
   const section = document.getElementById("wallet-section");
   section.innerHTML = `
     <div class="label">Connect Wallet</div>
-    <div class="onboard-text">Scan with your wallet to activate Patron</div>
+    <button class="wallet-btn" id="connect-browser-btn">Connect Browser Wallet</button>
+    <div class="onboard-divider"><span>or scan QR code</span></div>
     <div id="qr-container" class="qr-container"></div>
     <div class="wallet-row" style="margin-top:6px">
       <span class="wallet-label">Session</span>
@@ -58,9 +59,18 @@ function renderOnboarding(sessionAddress) {
     <div class="onboard-hint">Keep this open — it will update once detected</div>
   `;
 
-  // Fetch the join URI and render QR + clickable link
+  // Fetch the join URI, wire up the button, and render QR
   chrome.runtime.sendMessage({ type: "GET_JOIN_URI" }, async (uri) => {
     if (!uri || uri.error) return;
+
+    // Browser wallet button opens the connect page in a new tab
+    const btn = document.getElementById("connect-browser-btn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        chrome.tabs.create({ url: uri });
+      });
+    }
+
     const container = document.getElementById("qr-container");
     if (!container) return;
 
@@ -75,20 +85,19 @@ function renderOnboarding(sessionAddress) {
     } catch (err) {
       container.textContent = uri;
     }
-
-    const link = document.createElement("a");
-    link.href = uri;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = "open in browser →";
-    link.className = "qr-link";
-    container.appendChild(link);
   });
 }
 
 function renderLinked(status) {
   const section = document.getElementById("wallet-section");
   const balanceDisplay = status.usdcBalance != null ? `$${status.usdcBalance}` : "…";
+
+  // Update header balance
+  const headerBalance = document.getElementById("header-balance");
+  if (headerBalance) {
+    headerBalance.textContent = status.usdcBalance != null ? `$${status.usdcBalance}` : "—";
+  }
+
   section.innerHTML = `
     <div class="label">Account</div>
     <div class="wallet-row">
@@ -125,7 +134,7 @@ function update() {
     const { scrobble, totalGiven, recentGifts } = response;
     const state = scrobble?.status || "idle";
 
-    document.getElementById("total-given").textContent = `$${totalGiven}`;
+    document.getElementById("total-given").textContent = `$${totalGiven} given`;
 
     if (scrobble?.artist) {
       document.getElementById("track-name").textContent = scrobble.track || "--";

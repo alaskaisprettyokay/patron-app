@@ -29,11 +29,19 @@
       font-weight: 700;
       letter-spacing: -0.3px;
     }
-    .header-total {
+    .header-totals {
+      text-align: right;
+    }
+    .header-balance {
       font-family: 'JetBrains Mono', monospace;
       font-size: 14px;
       font-weight: 700;
       color: #c4813a;
+    }
+    .header-given {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: #8a847d;
     }
 
     .body-content { padding: 14px 16px; }
@@ -237,6 +245,24 @@
     .wallet-error { color: #c4813a; font-size: 12px; }
 
     /* Onboarding / QR code */
+    .onboard-divider {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 10px;
+      color: #8a847d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .onboard-divider::before,
+    .onboard-divider::after {
+      content: "";
+      flex: 1;
+      border-top: 1px solid #cdc5b8;
+    }
+    .onboard-divider span {
+      padding: 0 8px;
+    }
     .onboard-text {
       font-size: 10px;
       color: #78716c;
@@ -284,7 +310,10 @@
 <body>
   <div class="header">
     <div class="logo">onda</div>
-    <div class="header-total" id="total-given">$0.00</div>
+    <div class="header-totals">
+      <div class="header-balance" id="header-balance">—</div>
+      <div class="header-given" id="total-given">$0.00 given</div>
+    </div>
   </div>
 
   <div class="body-content">

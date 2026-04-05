@@ -1,6 +1,6 @@
-# Patron
+# Onda
 
-**Every listen pays the artist.** Patron detects what music you're listening to and sends USDC micropayments directly to artists — no middlemen.
+**Every listen pays the artist.** Onda detects what music you're listening to and sends USDC micropayments directly to artists — no middlemen.
 
 Built at ETHGlobal Cannes 2025.
 
@@ -30,7 +30,7 @@ Built at ETHGlobal Cannes 2025.
 │   - deposit USDC, auto-tip     │
 │   - escrow for unclaimed artists│
 │  PatronRegistry.sol             │
-│   - artist.patron.eth subnames │
+│   - artist.onda.eth subnames │
 │   - MusicBrainz MBID records   │
 └─────────────────────────────────┘
 ```
