@@ -18,6 +18,8 @@ export default function ClaimPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verifyUrl, setVerifyUrl] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [soundcloudUsername, setSoundcloudUsername] = useState("");
+  const [scToken, setScToken] = useState("");
   const [releaseResult, setReleaseResult] = useState<{
     txHash?: string;
     unclaimedReleased?: string;
@@ -45,31 +47,83 @@ export default function ClaimPage() {
     setSelectedArtist(artist);
     const code = `onda-verify-${artist.id.slice(0, 8)}`;
     setVerificationCode(code);
+    setSoundcloudUsername("");
+    setScToken("");
     try {
       const details = await getArtistDetails(artist.id);
       const urls = getArtistUrls(details.relations);
-      setVerifyUrl(urls.bandcamp || urls.website || urls.soundcloud || "");
+      if (urls.soundcloud) {
+        // Extract username from SoundCloud URL (e.g. https://soundcloud.com/username)
+        const scMatch = urls.soundcloud.match(/soundcloud\.com\/([^/?#]+)/);
+        if (scMatch) {
+          setSoundcloudUsername(scMatch[1]);
+          setVerifyUrl(urls.soundcloud);
+          setStep("verify");
+          return;
+        }
+      }
+      setVerifyUrl(urls.bandcamp || urls.website || "");
     } catch {}
     setStep("verify");
+  };
+
+  /** Fetch a verification token from our SoundCloud verify endpoint. */
+  const handleSoundcloudToken = async () => {
+    if (!soundcloudUsername.trim()) return;
+    setError("");
+    try {
+      const res = await fetch(`/api/verify-soundcloud?username=${encodeURIComponent(soundcloudUsername.trim())}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Could not find that SoundCloud user.");
+        return;
+      }
+      setScToken(data.token);
+      setVerificationCode(data.token);
+    } catch {
+      setError("couldn't reach the server.");
+    }
   };
 
   const handleVerify = async (demo: boolean) => {
     setVerifying(true);
     setError("");
     try {
-      const res = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mbid: selectedArtist!.id,
-          code: verificationCode,
-          url: demo ? undefined : verifyUrl,
-          demo,
-        }),
-      });
-      const data = await res.json();
-      if (data.verified) setStep("claim");
-      else setError(data.error || "verification didn't work.");
+      // SoundCloud verification — use the bio-token endpoint
+      if (!demo && scToken) {
+        const res = await fetch("/api/verify-soundcloud", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: scToken }),
+        });
+        const data = await res.json();
+        if (data.verified) {
+          // Also mark the MBID as verified so the claim step works
+          await fetch("/api/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mbid: selectedArtist!.id, code: verificationCode, demo: true }),
+          });
+          setStep("claim");
+        } else {
+          setError(data.message || data.error || "token not found in your SoundCloud bio.");
+        }
+      } else {
+        // Generic URL verification or demo mode
+        const res = await fetch("/api/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mbid: selectedArtist!.id,
+            code: verificationCode,
+            url: demo ? undefined : verifyUrl,
+            demo,
+          }),
+        });
+        const data = await res.json();
+        if (data.verified) setStep("claim");
+        else setError(data.error || "verification didn't work.");
+      }
     } catch {
       setError("couldn't reach the server.");
     } finally {
@@ -183,9 +237,69 @@ export default function ClaimPage() {
       {/* Verify */}
       {step === "verify" && selectedArtist && (
         <div>
-          <h2 className="text-xl font-bold mb-4">verify you're {selectedArtist.name}</h2>
-          {verifyUrl ? (
+          <h2 className="text-xl font-bold mb-4">verify you&apos;re {selectedArtist.name}</h2>
+          {soundcloudUsername ? (
             <>
+              {/* SoundCloud bio-token verification */}
+              <p className="text-ink-light text-sm mb-4">
+                we&apos;ll verify through your SoundCloud bio.
+              </p>
+
+              {/* Editable username — lets the artist fix MusicBrainz typos */}
+              <div className="flex gap-3 mb-4 items-end">
+                <div className="flex-1">
+                  <label className="text-xs text-ink-faint block mb-1">soundcloud username</label>
+                  <input
+                    type="text"
+                    value={soundcloudUsername}
+                    onChange={(e) => { setSoundcloudUsername(e.target.value); setScToken(""); }}
+                    className="w-full bg-transparent border-b-2 border-ink px-1 py-2 text-sm focus:outline-none font-mono"
+                  />
+                </div>
+                <button onClick={handleSoundcloudToken} className="btn-secondary text-sm whitespace-nowrap">
+                  {scToken ? "refresh token" : "get token"}
+                </button>
+              </div>
+
+              {scToken ? (
+                <>
+                  <p className="text-ink-light text-sm mb-2">
+                    paste this token anywhere in your SoundCloud bio, then click verify:
+                  </p>
+                  <div className="ink-block p-4 mb-4 text-center font-mono text-onda select-all">
+                    {scToken}
+                  </div>
+                  <p className="text-ink-faint text-xs mb-6">
+                    your page:{" "}
+                    <a href={`https://soundcloud.com/${soundcloudUsername}`} target="_blank" rel="noopener noreferrer" className="text-onda hover:underline">
+                      soundcloud.com/{soundcloudUsername}
+                    </a>
+                    {" · "}token expires in 15 minutes
+                  </p>
+                  <div className="flex gap-3">
+                    <button onClick={() => setStep("search")} className="btn-secondary">back</button>
+                    <button onClick={() => handleVerify(false)} disabled={verifying} className="btn-primary flex-1">
+                      {verifying ? "checking bio..." : "verify"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-ink-faint text-xs mb-6">
+                  click &quot;get token&quot; to start verification
+                </p>
+              )}
+
+              <button
+                onClick={() => handleVerify(true)}
+                disabled={verifying}
+                className="text-xs text-ink-faint hover:text-ink w-full text-center mt-4 py-2"
+              >
+                skip verification (demo mode)
+              </button>
+            </>
+          ) : verifyUrl ? (
+            <>
+              {/* Generic URL verification (bandcamp, website, etc.) */}
               <p className="text-ink-light text-sm mb-4">
                 add this code to your page, then click verify:
               </p>
