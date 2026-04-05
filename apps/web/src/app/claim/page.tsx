@@ -5,6 +5,7 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagm
 import { searchArtist, getArtistDetails, getArtistUrls, type MBArtist } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, mbidToBytes32, formatUSDC } from "@/lib/contracts";
 import { artistToSubname, formatENSName } from "@/lib/ens";
+import { WorldIDVerify } from "@/components/WorldIDVerify";
 
 type Step = "search" | "verify" | "claim" | "releasing" | "done";
 
@@ -24,6 +25,7 @@ export default function ClaimPage() {
     txHash?: string;
     unclaimedReleased?: string;
   } | null>(null);
+  const [worldIdVerifying, setWorldIdVerifying] = useState(false);
   const [error, setError] = useState("");
 
   const { writeContract, data: claimHash } = useWriteContract();
@@ -82,6 +84,37 @@ export default function ClaimPage() {
       setVerificationCode(data.token);
     } catch {
       setError("couldn't reach the server.");
+    }
+  };
+
+  const handleWorldIDVerified = async (proof: {
+    merkle_root: string;
+    nullifier_hash: string;
+    proof: string;
+    verification_level: string;
+  }) => {
+    if (!selectedArtist) return;
+    setWorldIdVerifying(true);
+    setError("");
+    try {
+      const res = await fetch("/api/verify-worldid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mbid: selectedArtist.id,
+          ...proof,
+        }),
+      });
+      const data = await res.json();
+      if (data.verified) {
+        setStep("claim");
+      } else {
+        setError(data.error || "World ID verification failed.");
+      }
+    } catch {
+      setError("couldn't reach the server.");
+    } finally {
+      setWorldIdVerifying(false);
     }
   };
 
@@ -238,6 +271,33 @@ export default function ClaimPage() {
       {step === "verify" && selectedArtist && (
         <div>
           <h2 className="text-xl font-bold mb-4">verify you&apos;re {selectedArtist.name}</h2>
+
+          {/* World ID verification — fastest path */}
+          <div className="border border-rule p-5 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold">verify with World ID</span>
+              <span className="text-xs text-onda font-mono">recommended</span>
+            </div>
+            <p className="text-ink-light text-xs mb-3">
+              prove you&apos;re a unique human. no bio edits needed.
+            </p>
+            {worldIdVerifying ? (
+              <p className="text-ink-faint text-sm">verifying proof...</p>
+            ) : (
+              <WorldIDVerify
+                onVerified={handleWorldIDVerified}
+                action="verify-artist"
+                signal={selectedArtist.id}
+              />
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 border-t border-rule" />
+            <span className="text-xs text-ink-faint">or verify via platform</span>
+            <div className="flex-1 border-t border-rule" />
+          </div>
+
           {soundcloudUsername ? (
             <>
               {/* SoundCloud bio-token verification */}

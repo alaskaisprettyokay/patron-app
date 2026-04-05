@@ -4,6 +4,8 @@ import { useState, useCallback } from "react";
 
 interface WorldIDVerifyProps {
   onVerified: (proof: WorldIDProof) => void;
+  action?: string;
+  signal?: string;
 }
 
 interface WorldIDProof {
@@ -16,7 +18,7 @@ interface WorldIDProof {
 const WORLD_APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID || "";
 const IS_CONFIGURED = WORLD_APP_ID && !WORLD_APP_ID.startsWith("app_your") && WORLD_APP_ID !== "app_demo";
 
-export function WorldIDVerify({ onVerified }: WorldIDVerifyProps) {
+export function WorldIDVerify({ onVerified, action = "verify-human", signal }: WorldIDVerifyProps) {
   const [verified, setVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export function WorldIDVerify({ onVerified }: WorldIDVerifyProps) {
   return (
     <div className="flex flex-col gap-2">
       {IS_CONFIGURED ? (
-        <WorldIDWidget appId={WORLD_APP_ID} onSuccess={handleSuccess} />
+        <WorldIDWidget appId={WORLD_APP_ID} onSuccess={handleSuccess} action={action} signal={signal} />
       ) : (
         <button
           onClick={handleVerify}
@@ -90,9 +92,13 @@ export function WorldIDVerify({ onVerified }: WorldIDVerifyProps) {
 function WorldIDWidget({
   appId,
   onSuccess,
+  action,
+  signal,
 }: {
   appId: string;
   onSuccess: (proof: WorldIDProof) => void;
+  action: string;
+  signal?: string;
 }) {
   const [Widget, setWidget] = useState<React.ComponentType<any> | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -122,7 +128,8 @@ function WorldIDWidget({
   return (
     <Widget
       app_id={appId}
-      action="verify-human"
+      action={action}
+      signal={signal}
       onSuccess={(result: any) =>
         onSuccess({
           merkle_root: result.merkle_root,
