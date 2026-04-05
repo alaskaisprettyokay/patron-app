@@ -18,6 +18,10 @@ for (const key of required) {
 const nextConfig = {
   reactStrictMode: true,
 
+  experimental: {
+    serverComponentsExternalPackages: ['@envio-dev/hypersync-client'],
+  },
+
   webpack: (config) => {
     config.resolve.fallback = { fs: false, net: false, tls: false };
     config.externals = [...(config.externals || []), 'pino-pretty', 'lokijs', 'encoding'];
