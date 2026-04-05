@@ -14,7 +14,8 @@
     "https://*.bandcamp.com/*",
     "https://music.youtube.com/*",
     "https://app.subcult.music/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://onda-tau.vercel.app/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -68,6 +69,15 @@
     {
       "matches": [
         "http://localhost:3000/*"
+      ],
+      "js": [
+        "content/onda-bridge.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://onda-tau.vercel.app/*"
       ],
       "js": [
         "content/onda-bridge.js"
