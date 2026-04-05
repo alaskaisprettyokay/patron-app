@@ -25,6 +25,8 @@ export default function ClaimPage() {
     txHash?: string;
     unclaimedReleased?: string;
   } | null>(null);
+  const [platformVerified, setPlatformVerified] = useState(false);
+  const [worldIdVerified, setWorldIdVerified] = useState(false);
   const [worldIdVerifying, setWorldIdVerifying] = useState(false);
   const [error, setError] = useState("");
 
@@ -107,7 +109,8 @@ export default function ClaimPage() {
       });
       const data = await res.json();
       if (data.verified) {
-        setStep("claim");
+        setWorldIdVerified(true);
+        if (platformVerified) setStep("claim");
       } else {
         setError(data.error || "World ID verification failed.");
       }
@@ -137,7 +140,8 @@ export default function ClaimPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mbid: selectedArtist!.id, code: verificationCode, demo: true }),
           });
-          setStep("claim");
+          setPlatformVerified(true);
+          if (worldIdVerified) setStep("claim");
         } else {
           setError(data.message || data.error || "token not found in your SoundCloud bio.");
         }
@@ -154,8 +158,12 @@ export default function ClaimPage() {
           }),
         });
         const data = await res.json();
-        if (data.verified) setStep("claim");
-        else setError(data.error || "verification didn't work.");
+        if (data.verified) {
+          setPlatformVerified(true);
+          if (worldIdVerified) setStep("claim");
+        } else {
+          setError(data.error || "verification didn't work.");
+        }
       }
     } catch {
       setError("couldn't reach the server.");
@@ -271,33 +279,19 @@ export default function ClaimPage() {
       {step === "verify" && selectedArtist && (
         <div>
           <h2 className="text-xl font-bold mb-4">verify you&apos;re {selectedArtist.name}</h2>
+          <p className="text-ink-light text-sm mb-6">
+            two steps: prove you own this profile, then prove you&apos;re human.
+          </p>
 
-          {/* World ID verification — fastest path */}
-          <div className="border border-rule p-5 mb-6">
+          {/* Step 1: Platform verification — proves identity */}
+          <div className={`border p-5 mb-4 ${platformVerified ? "border-onda" : "border-rule"}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold">verify with World ID</span>
-              <span className="text-xs text-onda font-mono">recommended</span>
+              <span className="text-sm font-bold">1. verify profile ownership</span>
+              {platformVerified && <span className="text-xs text-onda font-mono">[x] done</span>}
             </div>
-            <p className="text-ink-light text-xs mb-3">
-              prove you&apos;re a unique human. no bio edits needed.
-            </p>
-            {worldIdVerifying ? (
-              <p className="text-ink-faint text-sm">verifying proof...</p>
-            ) : (
-              <WorldIDVerify
-                onVerified={handleWorldIDVerified}
-                action="verify-artist"
-                signal={selectedArtist.id}
-              />
-            )}
-          </div>
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 border-t border-rule" />
-            <span className="text-xs text-ink-faint">or verify via platform</span>
-            <div className="flex-1 border-t border-rule" />
-          </div>
-
+          {!platformVerified ? (
+            <>
           {soundcloudUsername ? (
             <>
               {/* SoundCloud bio-token verification */}
@@ -399,6 +393,43 @@ export default function ClaimPage() {
               </div>
             </>
           )}
+            </>
+          ) : (
+            <p className="text-ink-faint text-xs">profile ownership confirmed via platform.</p>
+          )}
+          </div>
+
+          {/* Step 2: World ID — proves unique human */}
+          <div className={`border p-5 mb-6 ${worldIdVerified ? "border-onda" : "border-rule"}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold">2. prove you&apos;re human</span>
+              {worldIdVerified && <span className="text-xs text-onda font-mono">[x] done</span>}
+            </div>
+            {!worldIdVerified ? (
+              <>
+                <p className="text-ink-light text-xs mb-3">
+                  verify with World ID to prevent impersonation.
+                </p>
+                {worldIdVerifying ? (
+                  <p className="text-ink-faint text-sm">verifying proof...</p>
+                ) : (
+                  <WorldIDVerify
+                    onVerified={handleWorldIDVerified}
+                    action="verify-artist"
+                    signal={selectedArtist.id}
+                  />
+                )}
+              </>
+            ) : (
+              <p className="text-ink-faint text-xs">verified as unique human via World ID.</p>
+            )}
+          </div>
+
+          {platformVerified && worldIdVerified && (
+            <p className="text-onda text-sm font-bold mb-4">both checks passed — proceeding to claim...</p>
+          )}
+
+          <button onClick={() => setStep("search")} className="btn-secondary">back</button>
         </div>
       )}
 
