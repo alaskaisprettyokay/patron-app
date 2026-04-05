@@ -28,6 +28,13 @@ const ESCROW_ABI = [
     inputs: [{ name: "smartAccount", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
   },
+  {
+    name: "smartAccounts",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "address" }],
+  },
 ];
 
 const JOINED_ABI = [
@@ -115,28 +122,70 @@ export async function getJoinUri() {
 }
 
 /// Checks whether our session key is active on-chain.
-/// Reads sessionKey() directly from the smart account — no getLogs needed.
-/// Returns null if not yet linked or if the session key has been rotated.
+/// 1. If smartAccountAddress is in storage: calls sessionKey() on it directly.
+/// 2. If only ownerAddress is in storage: first resolves smartAccount via escrow,
+///    then calls sessionKey() on the result.
+/// Returns null if not linked or if the session key has been rotated.
 export async function checkForJoin() {
   const data = await chrome.storage.local.get([
     "sessionAddress",
     "ownerAddress",
     "smartAccountAddress",
   ]);
-  const { sessionAddress, ownerAddress, smartAccountAddress } = data;
-  if (!sessionAddress || !smartAccountAddress) return null;
+  let { sessionAddress, ownerAddress, smartAccountAddress } = data;
+  if (!sessionAddress) return null;
 
   try {
     const publicClient = getPublicClient();
+
+    // If we don't have the owner/smart account, query Hypersync for a past Joined event
+    // with our session key. This recovers the linked state when the popup was closed
+    // during the browser-wallet onboarding flow.
+    if (!ownerAddress) {
+      try {
+        const res = await fetch(
+          `${process.env.PATRON_WEB_URL}/api/join-lookup?sessionKey=${sessionAddress}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.found) {
+            ownerAddress = data.ownerAddress;
+            smartAccountAddress = data.smartAccountAddress;
+          }
+        }
+      } catch {
+        // best-effort — fall through to returning null
+      }
+    }
+
+    // If we have the owner but not the smart account, derive it from the escrow.
+    if (!smartAccountAddress && ownerAddress) {
+      const resolved = await publicClient.readContract({
+        address: ESCROW_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "smartAccounts",
+        args: [ownerAddress],
+      });
+      if (resolved && resolved !== "0x0000000000000000000000000000000000000000") {
+        smartAccountAddress = resolved;
+      }
+    }
+
+    if (!smartAccountAddress) return null;
+
     const onChainSession = await publicClient.readContract({
       address: smartAccountAddress,
       abi: SMART_ACCOUNT_ABI,
       functionName: "sessionKey",
     });
+
     if (onChainSession.toLowerCase() === sessionAddress.toLowerCase()) {
+      // Persist so future checks skip the escrow lookup.
+      await chrome.storage.local.set({ ownerAddress, smartAccountAddress });
       return { ownerAddress, smartAccountAddress };
     }
-    // Session key was rotated out — clear stale state so QR re-renders
+
+    // Session key was rotated out — clear stale state so QR re-renders.
     await chrome.storage.local.set({ ownerAddress: null, smartAccountAddress: null });
     return null;
   } catch (err) {

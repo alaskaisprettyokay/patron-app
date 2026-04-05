@@ -18,9 +18,12 @@ contract PatronEscrowTest is Test {
 
     bytes32 mbidHash = keccak256("test-mbid-1234");
     bytes32 otherMbid = keccak256("other-mbid");
+    string subname = "test-artist";
 
-    uint256 constant SESSION_PRIV_KEY = 0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef;
-    uint256 constant SESSION_PRIV_KEY_2 = 0xcafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe;
+    uint256 constant SESSION_PRIV_KEY =
+        0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef;
+    uint256 constant SESSION_PRIV_KEY_2 =
+        0xcafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe;
     address sessionKeyAddr;
     address sessionKeyAddr2;
 
@@ -55,12 +58,11 @@ contract PatronEscrowTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
-    function _signTip(
-        address smartAccount,
-        bytes32 _mbidHash,
-        uint256 amount,
-        uint256 nonce
-    ) internal pure returns (bytes memory) {
+    function _signTip(address smartAccount, bytes32 _mbidHash, uint256 amount, uint256 nonce)
+        internal
+        pure
+        returns (bytes memory)
+    {
         return _signTipWith(SESSION_PRIV_KEY, smartAccount, _mbidHash, amount, nonce);
     }
 
@@ -158,7 +160,7 @@ contract PatronEscrowTest is Test {
     function testTipWithSignatureVerifiedArtist() public {
         vm.prank(artist);
         escrow.claimArtist(mbidHash);
-        escrow.verifyAndRelease(mbidHash);
+        escrow.verifyAndRelease(mbidHash, subname);
 
         PatronSmartAccount smartAccount = _join();
         _fund(smartAccount, 10e6);
@@ -301,7 +303,7 @@ contract PatronEscrowTest is Test {
 
         vm.prank(artist);
         escrow.claimArtist(mbidHash);
-        escrow.verifyAndRelease(mbidHash);
+        escrow.verifyAndRelease(mbidHash, subname);
 
         assertTrue(escrow.isVerified(mbidHash));
         assertEq(escrow.unclaimedBalance(mbidHash), 0);
@@ -314,147 +316,12 @@ contract PatronEscrowTest is Test {
 
         vm.prank(listener);
         vm.expectRevert();
-        escrow.verifyAndRelease(mbidHash);
+        escrow.verifyAndRelease(mbidHash, subname);
     }
 
     function testVerifyAndReleaseNotClaimedReverts() public {
         vm.expectRevert("Not claimed");
-        escrow.verifyAndRelease(mbidHash);
-    }
-
-    // =========================================================================
-    // registerArtist (owner fast-path)
-    // =========================================================================
-
-    function testRegisterArtist() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-
-        assertEq(escrow.artistWallet(mbidHash), artist);
-        assertTrue(escrow.isVerified(mbidHash));
-        assertEq(escrow.artistSubname(mbidHash), "test-artist");
-        assertEq(escrow.subnameMbid("test-artist"), mbidHash);
-    }
-
-    function testRegisterArtistReleasesEscrowedFunds() public {
-        // Tip lands in unclaimed escrow first
-        _tipUnclaimed(mbidHash, 1e6);
-        assertEq(escrow.unclaimedBalance(mbidHash), 1e6);
-
-        // Owner registers artist — should release escrowed funds immediately
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-
-        assertEq(escrow.unclaimedBalance(mbidHash), 0);
-        assertEq(usdc.balanceOf(artist), 1e6);
-    }
-
-    function testRegisterArtistTipsRouteDirectly() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-
-        PatronSmartAccount smartAccount = _join();
-        _fund(smartAccount, 10e6);
-        uint256 nonce = escrow.tipNonce(address(smartAccount));
-        bytes memory sig = _signTip(address(smartAccount), mbidHash, 10000, nonce);
-        escrow.tipWithSignature(address(smartAccount), mbidHash, 10000, nonce, sig);
-
-        assertEq(usdc.balanceOf(artist), 10000);
-        assertEq(escrow.unclaimedBalance(mbidHash), 0);
-    }
-
-    function testRegisterArtistDuplicateReverts() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-
-        vm.expectRevert("Already registered");
-        escrow.registerArtist(mbidHash, "test-artist-2", address(0x3));
-    }
-
-    function testRegisterArtistSubnameTakenReverts() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-
-        vm.expectRevert("Subname taken");
-        escrow.registerArtist(otherMbid, "test-artist", address(0x3));
-    }
-
-    function testRegisterArtistNotOwnerReverts() public {
-        vm.prank(artist);
-        vm.expectRevert();
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-    }
-
-    function testRegisterArtistMbidStoredInTextRecord() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-        string memory stored = escrow.getTextRecord(mbidHash, "com.musicbrainz.mbid");
-        assertTrue(bytes(stored).length > 0);
-    }
-
-    // =========================================================================
-    // setSubname (post-claim ENS assignment)
-    // =========================================================================
-
-    function testSetSubname() public {
-        vm.prank(artist);
-        escrow.claimArtist(mbidHash);
-        escrow.verifyAndRelease(mbidHash);
-
-        escrow.setSubname(mbidHash, "test-artist");
-
-        assertEq(escrow.artistSubname(mbidHash), "test-artist");
-        assertEq(escrow.subnameMbid("test-artist"), mbidHash);
-    }
-
-    function testSetSubnameNotRegisteredReverts() public {
-        vm.expectRevert("Artist not registered");
-        escrow.setSubname(mbidHash, "test-artist");
-    }
-
-    function testSetSubnameAlreadyAssignedReverts() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-
-        vm.expectRevert("Subname already assigned");
-        escrow.setSubname(mbidHash, "test-artist-2");
-    }
-
-    function testSetSubnameTakenReverts() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-
-        vm.prank(address(0x4));
-        escrow.claimArtist(otherMbid);  // some other artist claims
-        // owner tries to assign the taken subname to the other artist
-        vm.expectRevert("Subname taken");
-        escrow.setSubname(otherMbid, "test-artist");
-    }
-
-    function testSetSubnameNotOwnerReverts() public {
-        vm.prank(artist);
-        escrow.claimArtist(mbidHash);
-
-        vm.prank(artist);
-        vm.expectRevert();
-        escrow.setSubname(mbidHash, "test-artist");
-    }
-
-    // =========================================================================
-    // resolveSubname / text records
-    // =========================================================================
-
-    function testResolveSubname() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-        assertEq(escrow.resolveSubname("test-artist"), artist);
-    }
-
-    function testResolveSubnameUnknownReturnsZero() public view {
-        assertEq(escrow.resolveSubname("nobody"), address(0));
-    }
-
-    function testSetAndGetTextRecord() public {
-        escrow.registerArtist(mbidHash, "test-artist", artist);
-        escrow.setTextRecord(mbidHash, "url", "https://example.com");
-        assertEq(escrow.getTextRecord(mbidHash, "url"), "https://example.com");
-    }
-
-    function testSetTextRecordNotOwnerReverts() public {
-        vm.prank(artist);
-        vm.expectRevert();
-        escrow.setTextRecord(mbidHash, "url", "https://example.com");
+        escrow.verifyAndRelease(mbidHash, subname);
     }
 
     // =========================================================================

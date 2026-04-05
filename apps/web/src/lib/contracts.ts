@@ -35,58 +35,11 @@ export const PATRON_ESCROW_ABI = [
     name: "verifyAndRelease",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [{ name: "mbidHash", type: "bytes32" }],
-    outputs: [],
-  },
-  // --- ENS subname registry ---
-  {
-    name: "registerArtist",
-    type: "function",
-    stateMutability: "nonpayable",
     inputs: [
       { name: "mbidHash", type: "bytes32" },
-      { name: "subname", type: "string" },
-      { name: "wallet", type: "address" },
+      { name: "label", type: "string" },
     ],
     outputs: [],
-  },
-  {
-    name: "setSubname",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "mbidHash", type: "bytes32" },
-      { name: "subname", type: "string" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "resolveSubname",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "subname", type: "string" }],
-    outputs: [{ name: "", type: "address" }],
-  },
-  {
-    name: "setTextRecord",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "mbidHash", type: "bytes32" },
-      { name: "key", type: "string" },
-      { name: "value", type: "string" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "getTextRecord",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "mbidHash", type: "bytes32" },
-      { name: "key", type: "string" },
-    ],
-    outputs: [{ name: "", type: "string" }],
   },
   {
     name: "setDefaultTipAmount",
@@ -127,13 +80,6 @@ export const PATRON_ESCROW_ABI = [
     stateMutability: "view",
     inputs: [{ name: "mbidHash", type: "bytes32" }],
     outputs: [{ name: "", type: "address" }],
-  },
-  {
-    name: "artistSubname",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "mbidHash", type: "bytes32" }],
-    outputs: [{ name: "", type: "string" }],
   },
   {
     name: "isVerified",
@@ -189,15 +135,6 @@ export const PATRON_ESCROW_ABI = [
     type: "event",
     inputs: [
       { name: "mbidHash", type: "bytes32", indexed: true },
-      { name: "wallet", type: "address", indexed: true },
-    ],
-  },
-  {
-    name: "ArtistRegistered",
-    type: "event",
-    inputs: [
-      { name: "mbidHash", type: "bytes32", indexed: true },
-      { name: "subname", type: "string", indexed: false },
       { name: "wallet", type: "address", indexed: true },
     ],
   },

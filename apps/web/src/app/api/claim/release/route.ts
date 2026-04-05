@@ -6,10 +6,13 @@ import { ESCROW_ADDRESS, ONDA_ESCROW_ABI } from "@/lib/contracts";
 
 export async function POST(request: NextRequest) {
   try {
-    const { mbidHash } = await request.json();
+    const { mbidHash, label } = await request.json();
 
     if (!mbidHash) {
       return NextResponse.json({ error: "mbidHash is required" }, { status: 400 });
+    }
+    if (!label) {
+      return NextResponse.json({ error: "label is required" }, { status: 400 });
     }
 
     // Check relayer key is configured
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
       address: ESCROW_ADDRESS,
       abi: ONDA_ESCROW_ABI,
       functionName: "verifyAndRelease",
-      args: [mbidHash as `0x${string}`],
+      args: [mbidHash as `0x${string}`, label as string],
     });
 
     await publicClient.waitForTransactionReceipt({ hash: txHash });

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useState, useEffect } from "react";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { searchArtist, getArtistDetails, getArtistUrls, type MBArtist } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, mbidToBytes32, formatUSDC } from "@/lib/contracts";
 import { artistToSubname, formatENSName } from "@/lib/ens";
@@ -32,6 +32,19 @@ export default function ClaimPage() {
 
   const { writeContract, data: claimHash } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash });
+
+  const { refetch: fetchArtistWallet } = useReadContract({
+    address: ESCROW_ADDRESS,
+    abi: ONDA_ESCROW_ABI,
+    functionName: "artistWallet",
+    args: selectedArtist ? [mbidToBytes32(selectedArtist.id)] : undefined,
+    query: { enabled: false },
+  });
+
+  // Auto-release once claimArtist is confirmed — no extra click needed
+  useEffect(() => {
+    if (claimConfirmed) handleRelease();
+  }, [claimConfirmed]);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -172,9 +185,23 @@ export default function ClaimPage() {
     }
   };
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     if (!selectedArtist || !address) return;
     setError("");
+
+    // Check if already claimed before submitting
+    const { data: existingWallet } = await fetchArtistWallet();
+    const zero = "0x0000000000000000000000000000000000000000";
+    if (existingWallet && existingWallet !== zero) {
+      if ((existingWallet as string).toLowerCase() === address.toLowerCase()) {
+        // Already claimed by this wallet — skip straight to release
+        handleRelease();
+      } else {
+        setError("this artist has already been claimed by a different wallet.");
+      }
+      return;
+    }
+
     writeContract(
       {
         address: ESCROW_ADDRESS,
@@ -194,7 +221,7 @@ export default function ClaimPage() {
       const res = await fetch("/api/claim/release", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mbidHash: mbidToBytes32(selectedArtist.id) }),
+        body: JSON.stringify({ mbidHash: mbidToBytes32(selectedArtist.id), label: artistToSubname(selectedArtist.name) }),
       });
       const data = await res.json();
       if (data.success) { setReleaseResult(data); setStep("done"); }
@@ -452,15 +479,9 @@ export default function ClaimPage() {
               </div>
             </div>
           </div>
-          {!claimConfirmed ? (
-            <button onClick={handleClaim} className="btn-primary w-full" disabled={!!claimHash}>
-              {claimHash ? "confirming..." : "claim profile"}
-            </button>
-          ) : (
-            <button onClick={handleRelease} className="btn-primary w-full">
-              verify and release funds
-            </button>
-          )}
+          <button onClick={handleClaim} className="btn-primary w-full" disabled={!!claimHash || claimConfirmed}>
+            {claimHash ? "confirming..." : "claim profile"}
+          </button>
         </div>
       )}
 

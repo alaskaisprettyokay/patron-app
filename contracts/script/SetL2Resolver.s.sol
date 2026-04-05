@@ -52,12 +52,8 @@ contract SetL2Resolver is Script {
         // Compute namehash("onda.eth") inline — no import needed.
         // namehash("eth")      = keccak256(bytes32(0) ++ keccak256("eth"))
         // namehash("onda.eth") = keccak256(namehash("eth") ++ keccak256("onda"))
-        bytes32 ethNode = keccak256(
-            abi.encodePacked(bytes32(0), keccak256(bytes("eth")))
-        );
-        bytes32 ondaNode = keccak256(
-            abi.encodePacked(ethNode, keccak256(bytes("onda")))
-        );
+        bytes32 ethNode = keccak256(abi.encodePacked(bytes32(0), keccak256(bytes("eth"))));
+        bytes32 ondaNode = keccak256(abi.encodePacked(ethNode, keccak256(bytes("onda"))));
 
         console.log("onda.eth node:");
         console.logBytes32(ondaNode);

@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useReadContract } from "wagmi";
 import { getArtistDetails, getArtistUrls, type MBArtistDetails } from "@/lib/musicbrainz";
 import { ESCROW_ADDRESS, ONDA_ESCROW_ABI, formatUSDC, mbidToBytes32 } from "@/lib/contracts";
-import { formatENSName } from "@/lib/ens";
+import { artistToSubname, formatENSName } from "@/lib/ens";
 import { fetchArtistGifts, type OnChainGift } from "@/lib/gifts";
 
 function timeAgo(ts: number): string {
@@ -77,13 +77,6 @@ export default function ArtistPage() {
     query: { refetchInterval: 10000 },
   });
 
-  const { data: subname } = useReadContract({
-    address: ESCROW_ADDRESS,
-    abi: ONDA_ESCROW_ABI,
-    functionName: "artistSubname",
-    args: [mbidHash],
-  });
-
   const { data: defaultTipAmount } = useReadContract({
     address: ESCROW_ADDRESS,
     abi: ONDA_ESCROW_ABI,
@@ -148,7 +141,7 @@ export default function ArtistPage() {
   const wallet = artistInfo ? (artistInfo as [string, boolean, bigint])[0] : undefined;
   const verified = artistInfo ? (artistInfo as [string, boolean, bigint])[1] : false;
   const isClaimed = wallet && wallet !== "0x0000000000000000000000000000000000000000";
-  const ensName = subname ? formatENSName(subname as string) : null;
+  const ensName = artist ? formatENSName(artistToSubname(artist.name)) : null;
 
   return (
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10">

@@ -13,7 +13,10 @@ interface IPatronEscrow {
     function unclaimedBalance(bytes32 mbidHash) external view returns (uint256);
     function artistSubname(bytes32 mbidHash) external view returns (string memory);
     function subnameMbid(string calldata subname) external view returns (bytes32);
-    function textRecords(bytes32 mbidHash, string calldata key) external view returns (string memory);
+    function textRecords(bytes32 mbidHash, string calldata key)
+        external
+        view
+        returns (string memory);
     function defaultTipAmount() external view returns (uint256);
 
     // --- Account management ---
@@ -35,7 +38,10 @@ interface IPatronEscrow {
     function setSubname(bytes32 mbidHash, string calldata subname) external;
     function resolveSubname(string calldata subname) external view returns (address);
     function setTextRecord(bytes32 mbidHash, string calldata key, string calldata value) external;
-    function getTextRecord(bytes32 mbidHash, string calldata key) external view returns (string memory);
+    function getTextRecord(bytes32 mbidHash, string calldata key)
+        external
+        view
+        returns (string memory);
     function getArtistInfo(bytes32 mbidHash)
         external
         view
