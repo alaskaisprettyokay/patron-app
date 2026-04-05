@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, http, formatUnits } from "viem";
+import { formatUnits } from "viem";
 import { mbidToBytes32 } from "@/lib/contracts";
-import { HypersyncClient, Query, Event } from "@envio-dev/hypersync-client";
 
-
-const ARC_RPC = "https://rpc.testnet.arc.network";
-const ESCROW_ADDRESS = process.env.NEXT_PUBLIC_PATRON_ESCROW_ADDRESS as `0x${string}`;
+const ESCROW_ADDRESS = process.env.NEXT_PUBLIC_PATRON_ESCROW_ADDRESS as string;
+const HYPERSYNC_URL = "https://arc-testnet.hypersync.xyz";
 const HYPERSYNC_BEARER_TOKEN = process.env.HYPERSYNC_BEARER_TOKEN;
+const ARC_RPC = "https://rpc.testnet.arc.network";
 
-const arcTestnet = {
-  id: 5042002,
-  name: "Arc Testnet",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-  rpcUrls: { default: { http: [ARC_RPC] } },
-} as const;
-
-const client = createPublicClient({
-  chain: arcTestnet,
-  transport: http(ARC_RPC),
-});
+// keccak256("Tipped(address,bytes32,uint256,uint256)")
+const TIPPED_EVENT_HASH = "0xdd409f4d8b52105a6673ade3e542f3c8e7cb0985917387804f6620413c683792";
 
 export async function GET(request: NextRequest) {
   if (!HYPERSYNC_BEARER_TOKEN) {
@@ -32,85 +22,83 @@ export async function GET(request: NextRequest) {
 
   const mbidHash = mbidToBytes32(mbid);
 
-  const envio = new HypersyncClient({
-    url: "https://arc-testnet.hypersync.xyz",
-    apiToken: HYPERSYNC_BEARER_TOKEN,
-    maxNumRetries: 0,
-  });
-
-  const TippedEventHash = '0xdd409f4d8b52105a6673ade3e542f3c8e7cb0985917387804f6620413c683792';
-
-  const query: Query = {
-    fromBlock: 0,
+  const query = {
+    from_block: 0,
     logs: [
       {
         address: [ESCROW_ADDRESS],
         topics: [
-          [TippedEventHash],
-          [],
-          [mbidHash]
-        ]
+          [TIPPED_EVENT_HASH],
+          [],        // topic1 = smartAccount (any)
+          [mbidHash], // topic2 = mbidHash (filtered)
+        ],
       },
     ],
-    fieldSelection: {
-      log: [
-        'BlockNumber',
-        'TransactionHash',
-        'LogIndex',
-        'Topic0',
-        'Topic1',
-        'Topic2',
-        'Data',
-      ],
+    field_selection: {
+      log: ["block_number", "transaction_hash", "topic1", "data"],
     },
   };
 
-
   try {
-    const logs = await envio.getEvents(query);
+    const res = await fetch(`${HYPERSYNC_URL}/query`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${HYPERSYNC_BEARER_TOKEN}`,
+      },
+      body: JSON.stringify(query),
+    });
 
-    // Get timestamps for each log
-    const gifts = await Promise.all(
-      logs.data.map(async (e: Event, _i, _n) => {
-        const log = e.log;
-        let timestamp: number | null = null;
+    if (!res.ok) {
+      throw new Error(`Hypersync error ${res.status}: ${await res.text()}`);
+    }
+
+    const json = await res.json();
+    const logs: any[] = (json.data ?? []).flatMap((item: any) => item.logs ?? []);
+
+    // Fetch timestamps for unique blocks via raw RPC (no viem needed server-side)
+    const uniqueBlocks = [...new Set<number>(logs.map((l) => l.blockNumber))];
+    const blockTimestamps = new Map<number, number>();
+
+    await Promise.allSettled(
+      uniqueBlocks.map(async (bn) => {
         try {
-          const block = await client.getBlock({ blockNumber: BigInt(log.blockNumber!) });
-          timestamp = Number(block.timestamp) * 1000;
+          const rpcRes = await fetch(ARC_RPC, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0", id: 1, method: "eth_getBlockByNumber",
+              params: [`0x${bn.toString(16)}`, false],
+            }),
+          });
+          const { result } = await rpcRes.json();
+          if (result?.timestamp) {
+            blockTimestamps.set(bn, parseInt(result.timestamp, 16) * 1000);
+          }
         } catch {
-          // skip
+          // best-effort
         }
-
-        return {
-          listener: `0x${String(log.topics[0]).slice(-40)}`,
-          amount: formatUnits(BigInt(String(log.data).slice(0, 64)), 6),
-          txHash: log.transactionHash,
-          blockNumber: Number(log.blockNumber),
-          timestamp,
-        };
       })
     );
 
-    // newest first
-    gifts.reverse();
+    const gifts = logs
+      .map((log) => ({
+        listener: `0x${String(log.topic1).slice(-40)}`,
+        amount: formatUnits(
+          BigInt(`0x${String(log.data).replace(/^0x/, "").slice(0, 64)}`),
+          6
+        ),
+        txHash: log.transactionHash,
+        blockNumber: log.blockNumber,
+        timestamp: blockTimestamps.get(log.blockNumber) ?? null,
+      }))
+      .reverse();
 
-    // unique supporters
-    const supporters = new Set(gifts.map((g) => g.listener)).size;
+    const supporters = new Set(gifts.map((g) => g.listener.toLowerCase())).size;
 
-    return NextResponse.json({
-      gifts,
-      total: gifts.length,
-      supporters,
-    });
+    return NextResponse.json({ gifts, total: gifts.length, supporters });
   } catch (error: any) {
     console.error("Failed to fetch artist gift logs:", error?.message || error);
-
-    // Fallback: return empty but don't error — the page has on-chain balance data
-    return NextResponse.json({
-      gifts: [],
-      total: 0,
-      supporters: 0,
-      error: error?.message || "Failed to query logs",
-    });
+    return NextResponse.json({ gifts: [], total: 0, supporters: 0, error: error?.message });
   }
 }
