@@ -4,6 +4,8 @@ dist/
 apps/extension/background/
 apps/extension/popup/popup.js
 .env
+.env.local
+*.pem
 cache/
 out/
 artifacts/
