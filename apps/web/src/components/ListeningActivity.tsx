@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface GiftRecord {
   artist: string;
@@ -13,6 +13,7 @@ interface GiftRecord {
 
 interface DayData {
   label: string;
+  date: number;
   count: number;
   amount: number;
 }
@@ -20,23 +21,26 @@ interface DayData {
 function getLast7Days(gifts: GiftRecord[]): DayData[] {
   const days: DayData[] = [];
   const now = new Date();
-
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const dayEnd = dayStart + 86400000;
-
     const dayGifts = gifts.filter((g) => g.timestamp >= dayStart && g.timestamp < dayEnd);
     days.push({
       label: d.toLocaleDateString("en", { weekday: "short" }).toLowerCase(),
+      date: d.getDate(),
       count: dayGifts.length,
       amount: dayGifts.reduce((sum, g) => sum + (g.amount || 0.01), 0),
     });
   }
-
   return days;
 }
+
+const FULL_DAY: Record<string, string> = {
+  sun: "sunday", mon: "monday", tue: "tuesday", wed: "wednesday",
+  thu: "thursday", fri: "friday", sat: "saturday",
+};
 
 export function ListeningActivity() {
   const [gifts, setGifts] = useState<GiftRecord[]>([]);
@@ -53,58 +57,71 @@ export function ListeningActivity() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const days = getLast7Days(gifts);
-  const maxCount = Math.max(...days.map((d) => d.count), 1);
+  const days = useMemo(() => getLast7Days(gifts), [gifts]);
+  const total = days.reduce((s, d) => s + d.count, 0);
+  const avg = total / Math.max(days.length, 1);
+  const max = Math.max(...days.map((d) => d.count), 1);
+  const bestIdx = days.reduce((best, d, i) => (d.count > days[best].count ? i : best), 0);
+  const bestDay = days[bestIdx];
+
+  const headline =
+    total === 0
+      ? "no waves yet — listen to something."
+      : bestDay && bestDay.count > 0
+        ? `${total} wave${total === 1 ? "" : "s"} sent — `
+        : `${total} wave${total === 1 ? "" : "s"} sent.`;
 
   return (
-    <div className="mb-12">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xs uppercase tracking-widest text-ink-faint">activity</h2>
-        <span className="text-xs text-ink-faint font-mono">
-          {gifts.length} gift{gifts.length !== 1 ? "s" : ""} total
-        </span>
+    <section className="border-t border-b border-rule py-10">
+      <div className="flex items-baseline justify-between mb-3">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
+          activity · last 7 days
+        </div>
+        <div className="text-[10px] font-mono uppercase tracking-widest text-ink-faint">
+          daily average · {avg.toFixed(1)}
+        </div>
       </div>
 
-      <div className="flex items-end gap-2 h-28">
-        {days.map((day, i) => {
-          const height = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
-          const isToday = i === days.length - 1;
+      <h2 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight mb-8">
+        {headline}
+        {bestDay && bestDay.count > 0 && (
+          <span className="onda-serif-italic text-onda">
+            {FULL_DAY[bestDay.label]} was a good day.
+          </span>
+        )}
+      </h2>
 
+      <div className="grid grid-cols-7 gap-3 items-end" style={{ minHeight: 220 }}>
+        {days.map((day, i) => {
+          const heightPct = max > 0 ? (day.count / max) * 100 : 0;
+          const isBest = i === bestIdx && day.count > 0;
           return (
-            <div key={day.label} className="flex-1 flex flex-col items-center gap-2">
-              <div className="w-full flex items-end justify-center" style={{ height: "80px" }}>
-                {day.count > 0 ? (
-                  <div
-                    className={`w-full max-w-[44px] transition-all duration-300 ${
-                      isToday ? "bg-onda" : "bg-ink/15"
-                    }`}
-                    style={{ height: `${Math.max(height, 6)}%` }}
-                    title={`${day.count} gift${day.count !== 1 ? "s" : ""} — $${day.amount.toFixed(2)}`}
-                  />
-                ) : (
-                  <div
-                    className="w-full max-w-[44px] bg-rule/40"
-                    style={{ height: "2px" }}
-                  />
-                )}
+            <div key={`${day.label}-${i}`} className="flex flex-col items-center">
+              <div className="text-[11px] font-mono text-ink-faint mb-1 h-4">
+                {day.count > 0 ? day.count : ""}
               </div>
-              <span
-                className={`text-[10px] font-mono ${
-                  isToday ? "text-onda font-bold" : "text-ink-faint"
-                }`}
+              <div className="w-full flex items-end" style={{ height: 180 }}>
+                <div
+                  className="w-full transition-all duration-500"
+                  style={{
+                    height: `${Math.max(heightPct, day.count > 0 ? 8 : 2)}%`,
+                    background: isBest
+                      ? "var(--onda-rust, #B8621B)"
+                      : "var(--onda-faded, #CFC6B6)",
+                  }}
+                  title={`${day.count} wave${day.count === 1 ? "" : "s"} — $${day.amount.toFixed(2)}`}
+                />
+              </div>
+              <div
+                className={`text-xs font-mono mt-3 ${isBest ? "text-onda font-bold" : "text-ink-faint"}`}
               >
                 {day.label}
-              </span>
+              </div>
+              <div className="text-[10px] font-mono text-ink-faint">{day.date}</div>
             </div>
           );
         })}
       </div>
-
-      {gifts.length === 0 && (
-        <div className="text-center text-ink-faint text-xs mt-4">
-          play music with the extension to see your activity here.
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
