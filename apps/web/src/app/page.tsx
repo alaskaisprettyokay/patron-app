@@ -1,176 +1,141 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { Reveal, SplitReveal, WordStagger, MarqueeLine } from "@/design/motion";
+import { Wave } from "./landing/components/Wave";
+import { PlatformDemo } from "./landing/components/PlatformDemo";
+import { StatsBar, HowItWorks, LiveTicker, ArtistSpotlight, Manifesto, FAQ } from "./landing/components/Sections";
+
+const container = { maxWidth: 1280, margin: "0 auto", padding: "0 48px" } as const;
+
+function btn(variant: "primary" | "secondary"): React.CSSProperties {
+  const base: React.CSSProperties = {
+    padding: "14px 22px", fontSize: 14, fontWeight: 600, border: 0, cursor: "pointer",
+    display: "inline-flex", alignItems: "center", gap: 10, textTransform: "lowercase",
+    transition: "background 120ms ease",
+  };
+  if (variant === "primary") return { ...base, background: "var(--onda-ink, #0D0D0D)", color: "var(--onda-paper, #ECE6DB)" };
+  return { ...base, background: "transparent", color: "var(--onda-ink, #0D0D0D)", border: "1.5px solid var(--onda-ink, #0D0D0D)" };
+}
+
+function PlatformChip({ name }: { name: string }) {
+  return (
+    <span style={{ border: "1px solid var(--onda-line, rgba(13,13,13,0.12))", borderRadius: 999, padding: "4px 10px", fontSize: 11, background: "rgba(255,255,255,0.3)" }}>
+      {name}
+    </span>
+  );
+}
 
 export default function Home() {
+  // onClick stubs — the existing app already has /claim + /onda.zip wired up.
+  const onDownload = () => { window.location.href = "/onda.zip"; };
+
   return (
-    <div className="min-h-[calc(100vh-3.5rem)]">
-      {/* Hero */}
-      <section className="max-w-4xl mx-auto px-5 sm:px-8 pt-20 pb-16">
-        <h1 className="text-5xl sm:text-7xl font-bold tracking-tight leading-[0.95] mb-6 max-w-lg">
-          every play
-          <br />
-          sends a
-          <br />
-          <span className="text-onda">wave.</span>
-        </h1>
-        <p className="text-ink-light text-lg max-w-md mb-8 leading-snug">
-          Spotify sends artists $0.003 per stream.
-          onda lets you give them $0.01 directly.
-        </p>
-        <div className="flex gap-3 flex-wrap">
-          <a href="/onda.zip" download className="btn-primary">
-            download extension
-          </a>
-          <Link href="/claim" className="btn-secondary">
-            i'm an artist
-          </Link>
-        </div>
-      </section>
-
-      {/* Numbers — big monospace in inverted bar */}
-      <section className="ink-block">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 py-8">
-          <div className="grid grid-cols-3 gap-6">
-            <div>
-              <div className="font-mono text-3xl sm:text-4xl font-bold tracking-tight">$0.01</div>
-              <div className="text-sm text-paper/50 mt-1">per listen</div>
-            </div>
-            <div>
-              <div className="font-mono text-3xl sm:text-4xl font-bold tracking-tight">100%</div>
-              <div className="text-sm text-paper/50 mt-1">to the artist</div>
-            </div>
-            <div>
-              <div className="font-mono text-3xl sm:text-4xl font-bold tracking-tight">0</div>
-              <div className="text-sm text-paper/50 mt-1">middlemen</div>
-            </div>
+    <div data-screen-label="01 Landing">
+      {/* ---------- HERO ---------- */}
+      <section style={{ position: "relative", padding: "80px 0 100px", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, opacity: 0.5, pointerEvents: "none" }}>
+          <div style={{ position: "absolute", right: "-5%", top: "10%", width: "65%", height: "60%" }}>
+            <Wave intensity={1} />
           </div>
         </div>
-      </section>
 
-      {/* How it works */}
-      <section className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
-        <h2 className="text-xs uppercase tracking-widest text-ink-faint mb-10">How it works</h2>
-        <div className="grid md:grid-cols-3 gap-10">
+        <div style={{ ...container, position: "relative", display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 60, alignItems: "start" }}>
           <div>
-            <div className="text-5xl font-bold text-onda/20 leading-none mb-3">01</div>
-            <h3 className="text-lg font-bold mb-2">listen to music</h3>
-            <p className="text-ink-light text-sm leading-relaxed">
-              Spotify, SoundCloud, Bandcamp, YouTube Music.
-              onda detects what's playing.
-            </p>
-          </div>
-          <div>
-            <div className="text-5xl font-bold text-onda/20 leading-none mb-3">02</div>
-            <h3 className="text-lg font-bold mb-2">gifts go out</h3>
-            <p className="text-ink-light text-sm leading-relaxed">
-              each track sends a gift from your balance.
-              if the artist hasn't claimed yet, it waits for them.
-            </p>
-          </div>
-          <div>
-            <div className="text-5xl font-bold text-onda/20 leading-none mb-3">03</div>
-            <h3 className="text-lg font-bold mb-2">artists collect</h3>
-            <p className="text-ink-light text-sm leading-relaxed">
-              verify identity. receive gifts directly.
-              no signup. no email. just money.
-            </p>
-          </div>
-        </div>
-      </section>
+            <Reveal delay={0} distance={14} duration={700}>
+              <div className="font-mono lowercase" style={{ fontSize: 11, color: "var(--onda-muted-2, #6B655B)", letterSpacing: 1.5, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
+                <span className="onda-live-dot" />
+                live · tipping artists right now
+              </div>
+            </Reveal>
 
-      {/* Extension preview + platforms */}
-      <section className="border-t border-rule">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
-          <div className="flex flex-col md:flex-row gap-12 items-start">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-3">the extension sits in your toolbar</h2>
-              <p className="text-ink-light text-sm leading-relaxed mb-6 max-w-sm">
-                it watches what you listen to and sends a gift to every artist.
-                you don't have to do anything. just listen.
+            <SplitReveal
+              as="h1"
+              tokens={[
+                "every play",
+                { br: true },
+                "sends a",
+                { br: true },
+                { node: <span className="onda-serif-italic" style={{ color: "var(--onda-rust, #B8621B)" }}>wave.</span> },
+              ]}
+              step={80}
+              distance={40}
+              duration={1000}
+              style={{
+                fontSize: 108, lineHeight: 0.92, fontWeight: 800, letterSpacing: -3.5,
+                margin: "0 0 32px", color: "var(--onda-ink, #0D0D0D)", textTransform: "lowercase",
+              }}
+            />
+
+            <Reveal delay={500} distance={14} duration={700}>
+              <p className="lowercase" style={{ fontSize: 18, lineHeight: 1.5, color: "var(--onda-muted-2, #6B655B)", maxWidth: 440, margin: "0 0 40px" }}>
+                streaming pays artists a third of a penny per play.<br />
+                onda lets you give them <strong style={{ color: "var(--onda-ink, #0D0D0D)" }}>a whole cent directly</strong>.
+                no labels. no middlemen. just sound.
               </p>
-              <a href="/onda.zip" download className="btn-primary inline-block mb-5">
-                download extension
-              </a>
-              <div className="flex flex-wrap gap-2">
-                {["Spotify", "SoundCloud", "Bandcamp", "YouTube Music"].map((p) => (
-                  <span key={p} className="text-xs border border-rule px-3 py-1.5 hover:border-ink transition-colors">
-                    {p}
-                  </span>
-                ))}
-              </div>
-            </div>
-            {/* Mini popup mock */}
-            <div className="w-[240px] shrink-0 border border-rule bg-paper-dark shadow-[6px_6px_0_0_rgba(21,19,17,0.06)]">
-              <div className="bg-ink text-paper px-4 py-2.5 flex justify-between items-baseline">
-                <span className="font-bold text-sm">onda</span>
-                <span className="text-onda text-xs font-mono">$1.40</span>
-              </div>
-              <div className="p-4">
-                <div className="text-xs text-ink-faint uppercase tracking-widest mb-2">now listening</div>
-                <div className="font-bold text-lg leading-tight">Burial</div>
-                <div className="text-ink-light text-sm">Untrue -- "Archangel"</div>
-                <div className="mt-3 border-t border-rule pt-3 space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-ink-light">sent</span>
-                    <span className="text-onda font-bold">$0.01</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-ink-light">total to Burial</span>
-                    <span className="font-mono">$1.40</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-ink-light">supporters</span>
-                    <span className="font-mono">47</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            </Reveal>
+
+            <Reveal delay={700} distance={14} duration={700} style={{ display: "flex", gap: 12, marginBottom: 32 }}>
+              <button onClick={onDownload} style={btn("primary")}>
+                <span>download extension</span>
+                <span style={{ fontSize: 12, opacity: 0.6 }}>↓</span>
+              </button>
+              <Link href="/claim" style={btn("secondary")}>i'm an artist</Link>
+            </Reveal>
+
+            <Reveal delay={850} distance={10} duration={700} className="lowercase" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "var(--onda-muted-2, #6B655B)", flexWrap: "wrap" }}>
+              <span>works with</span>
+              <PlatformChip name="spotify" />
+              <PlatformChip name="soundcloud" />
+              <PlatformChip name="bandcamp" />
+              <PlatformChip name="youtube" />
+              <PlatformChip name="online radio" />
+            </Reveal>
+          </div>
+
+          <PlatformDemo />
+        </div>
+      </section>
+
+      <StatsBar />
+
+      <div style={{ borderBottom: "1px solid var(--onda-line, rgba(13,13,13,0.12))", padding: "14px 0", background: "var(--onda-paper-2, #E3DCCD)" }}>
+        <MarqueeLine text="every play sends a wave · direct to artists · no middlemen · a whole cent · listen generously" speed={60} />
+      </div>
+
+      <HowItWorks />
+
+      <div style={{ borderBottom: "1px solid var(--onda-line, rgba(13,13,13,0.12))", padding: "14px 0", background: "var(--onda-paper-2, #E3DCCD)" }}>
+        <MarqueeLine text="claire rousay · loraine james · iglooghost · astrid sonne · perila · nkisi · jasmine infiniti · upsammy · mica levi" speed={80} color="var(--onda-rust, #B8621B)" />
+      </div>
+
+      <LiveTicker />
+      <ArtistSpotlight />
+      <Manifesto />
+      <FAQ />
+
+      {/* ---------- CTA ---------- */}
+      <section style={{ padding: "140px 0 120px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", height: 300, opacity: 0.4 }}>
+          <Wave intensity={1.3} />
+        </div>
+        <div style={{ ...container, position: "relative" }}>
+          <h2 className="lowercase" style={{ fontSize: 140, lineHeight: 0.9, fontWeight: 800, letterSpacing: -5, margin: "0 0 32px" }}>
+            <WordStagger text="send a" step={90} distance={60} />{" "}
+            <WordStagger delay={250} text="wave." step={90} distance={60} className="onda-serif-italic" style={{ color: "var(--onda-rust, #B8621B)" }} />
+          </h2>
+          <p className="lowercase" style={{ fontSize: 20, color: "var(--onda-muted-2, #6B655B)", marginBottom: 40 }}>
+            free. takes ten seconds. works everywhere you listen.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+            <button onClick={onDownload} style={{ ...btn("primary"), padding: "18px 28px", fontSize: 15 }}>
+              download for chrome ↓
+            </button>
+            <button style={{ ...btn("secondary"), padding: "18px 28px", fontSize: 15 }}>firefox · safari</button>
           </div>
         </div>
       </section>
-
-      {/* Artist CTA */}
-      <section className="ink-block">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div>
-            <h2 className="text-2xl font-bold mb-1">are you an artist?</h2>
-            <p className="text-paper/60 text-sm">
-              people might already be giving to you. claim your profile.
-            </p>
-          </div>
-          <Link href="/claim" className="border border-paper/30 px-6 py-3 text-sm hover:bg-paper hover:text-ink transition-all text-center shrink-0">
-            claim profile
-          </Link>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
-        <p className="text-ink-light text-lg mb-5 max-w-md leading-snug">
-          add some funds and onda handles the rest.
-          every artist you listen to gets something.
-        </p>
-        <div className="flex gap-3">
-          <a href="/onda.zip" download className="btn-primary">
-            download extension
-          </a>
-          <Link href="/dashboard" className="btn-secondary">
-            get started
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-rule py-5">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 flex justify-between items-center">
-          <span className="text-xs text-ink-faint">buena onda</span>
-          <a
-            href="https://github.com/alaskaisprettyokay/patron-app"
-            className="text-xs text-ink-faint hover:text-ink transition-colors"
-          >
-            source
-          </a>
-        </div>
-      </footer>
     </div>
   );
 }

@@ -7,7 +7,7 @@ const ClientConnectButton = dynamic(
     import("@rainbow-me/rainbowkit").then((mod) => {
       const { ConnectButton } = mod;
       return function RainbowButton() {
-        return <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />;
+        return <ConnectButton showBalance={false} chainStatus="icon" accountStatus="address" />;
       };
     }),
   { ssr: false }

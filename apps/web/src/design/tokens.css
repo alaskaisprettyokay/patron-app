@@ -1,0 +1,87 @@
+/**
+ * Onda design tokens — extends the existing paper/ink/rust palette
+ * with the shades used in the new design exploration.
+ *
+ * Import this once at the top of `globals.css`:
+ *   @import "@/design/tokens.css";
+ *
+ * Every variable is namespaced under `--onda-*` to avoid collisions.
+ */
+
+:root {
+  /* Paper / ink */
+  --onda-paper: #ECE6DB;
+  --onda-paper-2: #E3DCCD;
+  --onda-ink: #0D0D0D;
+  --onda-ink-2: #1A1A1A;
+
+  /* Muted grays */
+  --onda-muted: #8A8378;
+  --onda-muted-2: #6B655B;
+  --onda-faded: #CFC6B6;
+
+  /* Accent (rust / onda orange) */
+  --onda-rust: #B8621B;
+  --onda-rust-ink: #8F4A12;
+  --onda-rust-glow: #F4A160;
+
+  /* Structural */
+  --onda-line: rgba(13, 13, 13, 0.12);
+  --onda-line-strong: rgba(13, 13, 13, 0.24);
+
+  /* Motion */
+  --onda-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --onda-reveal-duration: 900ms;
+  --onda-reveal-distance: 24px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Keyframes                                                          */
+/* ------------------------------------------------------------------ */
+
+@keyframes onda-blink {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(184, 98, 27, 0.2); opacity: 1; }
+  50%      { box-shadow: 0 0 0 10px rgba(184, 98, 27, 0.05); opacity: 0.65; }
+}
+
+@keyframes onda-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes onda-slide-in-right {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Utility classes                                                    */
+/* ------------------------------------------------------------------ */
+
+.onda-serif-italic {
+  font-family: "Fraunces", "Iowan Old Style", Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+  font-variation-settings: "SOFT" 100;
+}
+
+.onda-mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.onda-live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--onda-rust);
+  box-shadow: 0 0 0 4px rgba(184, 98, 27, 0.2);
+  animation: onda-blink 2.4s ease-in-out infinite;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .onda-live-dot {
+    animation: none;
+  }
+}

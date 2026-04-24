@@ -14,9 +14,11 @@
     "https://*.bandcamp.com/*",
     "https://music.youtube.com/*",
     "https://app.subcult.music/*",
+    "https://musicbrainz.org/*",
     "http://localhost:3000/*",
     "https://onda-tau.vercel.app/*",
-    "https://onda.eth.pm/*"
+    "https://onda.eth.pm/*",
+    "https://getonda.org/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -88,6 +90,15 @@
     {
       "matches": [
         "https://onda.eth.pm/*"
+      ],
+      "js": [
+        "content/onda-bridge.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://getonda.org/*"
       ],
       "js": [
         "content/onda-bridge.js"
