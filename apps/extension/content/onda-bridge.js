@@ -48,4 +48,14 @@ window.addEventListener("message", (event) => {
     sendStatusToPage();
   }
 
+  // Web /connect page fires this on a successful join tx. Forward to the
+  // service worker so the popup updates instantly — no Hypersync / event-watcher
+  // race required.
+  if (event.data?.type === "ONDA_LINK_DETECTED") {
+    const { ownerAddress, smartAccountAddress, sessionAddress } = event.data;
+    chrome.runtime.sendMessage({
+      type: "SET_LINK",
+      data: { ownerAddress, smartAccountAddress, sessionAddress },
+    });
+  }
 });

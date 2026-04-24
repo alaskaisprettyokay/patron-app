@@ -22,8 +22,11 @@ initSession().then(({ sessionAddress, isNew }) => {
 
 // Keep the service worker alive while the popup holds a port open.
 // While connected, watch for a Joined event and notify the popup when found.
+let activePopupPort = null;
+
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "popup") return;
+  activePopupPort = port;
 
   let unwatch = null;
 
@@ -38,6 +41,7 @@ chrome.runtime.onConnect.addListener((port) => {
 
   port.onDisconnect.addListener(() => {
     if (unwatch) unwatch();
+    if (activePopupPort === port) activePopupPort = null;
   });
 });
 
@@ -121,6 +125,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         .then(sendResponse)
         .catch((err) => sendResponse({ error: err.message }));
       return true;
+
+    case "SET_LINK": {
+      // Push from the web /connect page via the content-script bridge.
+      // Only accept if the session key matches ours — prevents any tab
+      // from flipping our link state.
+      const { ownerAddress, smartAccountAddress, sessionAddress } = data || {};
+      if (!ownerAddress || !smartAccountAddress || !sessionAddress) {
+        sendResponse({ ok: false, reason: "missing fields" });
+        return false;
+      }
+      chrome.storage.local.get(["sessionAddress"]).then(({ sessionAddress: stored }) => {
+        if (!stored || stored.toLowerCase() !== sessionAddress.toLowerCase()) {
+          sendResponse({ ok: false, reason: "session mismatch" });
+          return;
+        }
+        chrome.storage.local.set({ ownerAddress, smartAccountAddress }).then(() => {
+          if (activePopupPort) {
+            activePopupPort.postMessage({ type: "LINKED", ownerAddress, smartAccountAddress });
+          }
+          sendResponse({ ok: true });
+        });
+      });
+      return true;
+    }
   }
 
   chrome.storage.local.set({ scrobbleState });

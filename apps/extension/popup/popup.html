@@ -3,359 +3,389 @@
 <head>
   <meta charset="UTF-8">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:ital,wght@1,700&display=swap');
+
+    :root {
+      --onda-paper: #ECE6DB;
+      --onda-paper-2: #E3DCCD;
+      --onda-ink: #0D0D0D;
+      --onda-ink-2: #1A1A1A;
+      --onda-muted: #8A8378;
+      --onda-muted-2: #6B655B;
+      --onda-faded: #CFC6B6;
+      --onda-rust: #B8621B;
+      --onda-rust-ink: #8F4A12;
+      --onda-rust-glow: #F4A160;
+      --onda-line: rgba(13, 13, 13, 0.12);
+      --onda-line-strong: rgba(13, 13, 13, 0.24);
+    }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      width: 320px;
-      font-family: 'Inter', system-ui, sans-serif;
-      background: #f0eae0;
-      color: #151311;
-      font-size: 13px;
-      line-height: 1.4;
+    html, body {
+      width: 380px;
+      background: var(--onda-paper);
+      color: var(--onda-ink);
+      font-family: 'Inter', -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Inverted header */
-    .header {
-      background: #151311;
-      color: #f0eae0;
-      padding: 12px 16px;
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .serif {
+      font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+      font-style: italic;
+      font-weight: 700;
+    }
+
+    /* Header — inverted ink */
+    .onda-popup__header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 16px 20px;
+      background: var(--onda-ink);
+      color: var(--onda-paper);
+      text-transform: lowercase;
     }
-    .logo {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+    .onda-popup__wordmark {
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-    .header-totals {
-      text-align: right;
-    }
-    .header-balance {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 14px;
-      font-weight: 700;
-      color: #c4813a;
-    }
-    .header-given {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      color: #8a847d;
-    }
+    .onda-popup__wordmark svg { display: block; }
+    .onda-popup__balance { text-align: right; }
+    .onda-popup__balance-val { font-size: 14px; color: var(--onda-rust); font-weight: 600; }
+    .onda-popup__balance-sub { font-size: 9px; color: var(--onda-muted); margin-top: 2px; }
 
-    .body-content { padding: 14px 16px; }
-
-    /* Section label */
-    .label {
+    /* Eyebrow / live dot */
+    .onda-popup__eyebrow {
       font-size: 10px;
-      text-transform: uppercase;
+      color: var(--onda-muted-2);
       letter-spacing: 1.5px;
-      color: #8a847d;
-      margin-bottom: 8px;
-      font-weight: 500;
+      text-transform: lowercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .onda-live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--onda-rust);
+      box-shadow: 0 0 0 4px rgba(184, 98, 27, 0.2);
+      animation: onda-blink 2.4s ease-in-out infinite;
+    }
+    @keyframes onda-blink {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(184, 98, 27, 0.2); opacity: 1; }
+      50%      { box-shadow: 0 0 0 10px rgba(184, 98, 27, 0.05); opacity: 0.65; }
     }
 
-    /* Now Playing */
-    .now-playing { padding: 0 0 10px 0; }
-    .artist-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: #151311;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.15;
-      letter-spacing: -0.3px;
+    /* Now playing */
+    .onda-popup__np {
+      padding: 20px 20px 24px;
+      border-bottom: 1px solid var(--onda-line);
     }
-    .track-name {
-      font-size: 13px;
-      color: #5c5650;
-      margin-top: 2px;
+    .onda-popup__np-row { display: flex; gap: 14px; margin-top: 16px; }
+    .onda-popup__art {
+      width: 72px; height: 72px; border-radius: 4px; flex-shrink: 0;
+      position: relative; overflow: hidden;
+      background: linear-gradient(135deg, #2A3A5B, #6B4A8C, #D97B4A);
     }
-    .platform-badge {
-      display: inline-block;
-      font-size: 9px;
-      padding: 2px 6px;
-      border: 1px solid #cdc5b8;
-      color: #8a847d;
-      margin-top: 6px;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      font-weight: 500;
+    .onda-popup__art::after {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.3), transparent 60%);
     }
-
-    /* Progress */
-    .progress-container { margin-top: 10px; }
-    .progress-bar {
-      height: 3px;
-      background: #cdc5b8;
-      overflow: hidden;
+    .onda-popup__np-meta { flex: 1; min-width: 0; }
+    .onda-popup__np-title {
+      font-size: 20px; font-weight: 800;
+      letter-spacing: -0.5px; line-height: 1.05;
+      text-transform: lowercase;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .progress-fill {
-      height: 100%;
-      transition: width 0.3s ease, background-color 0.3s ease;
-      width: 0%;
-    }
-    .progress-fill.listening { background: #151311; }
-    .progress-fill.complete { background: #c4813a; }
-    .progress-text {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      color: #8a847d;
-      margin-top: 3px;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Gift result */
-    .gift-result {
-      margin-top: 8px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .gift-result.sent { color: #c4813a; }
-    .gift-result.escrowed { color: #5c5650; }
-    .gift-result a { color: inherit; }
-
-    .gift-detail {
-      font-size: 12px;
-      color: #5c5650;
+    .onda-popup__np-artist {
+      font-size: 16px;
+      color: var(--onda-rust);
       margin-top: 4px;
+      text-transform: lowercase;
     }
-
-    /* Divider */
-    .divider {
-      border: none;
-      border-top: 1px solid #cdc5b8;
-      margin: 12px 0;
-    }
-
-    /* History */
-    .history-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(205, 197, 184, 0.5);
-    }
-    .history-item:last-child { border-bottom: none; }
-    .history-item .h-artist {
-      font-weight: 700;
+    .onda-popup__np-empty {
       font-size: 13px;
-    }
-    .history-item .h-track {
-      color: #8a847d;
-      font-size: 11px;
-    }
-    .history-item .amount {
-      color: #c4813a;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .history-item .amount a { color: inherit; text-decoration: none; }
-    .history-item .amount a:hover { text-decoration: underline; }
-
-    .empty-state {
-      padding: 16px 0;
-      color: #8a847d;
-      font-size: 12px;
+      color: var(--onda-muted);
+      margin-top: 16px;
     }
 
-    /* Wallet */
-    .wallet-section { padding: 0; }
-    .wallet-row {
-      display: flex;
-      justify-content: space-between;
+    /* Tip progress */
+    .onda-popup__tip-progress { margin-top: 16px; }
+    .onda-popup__tip-row {
+      display: flex; justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 10px; color: var(--onda-muted-2);
+      text-transform: lowercase;
+    }
+    .onda-popup__tip-bar {
+      height: 3px; background: rgba(13,13,13,0.08);
+      position: relative; overflow: hidden;
+    }
+    .onda-popup__tip-fill {
+      position: absolute; inset: 0 auto 0 0;
+      background: var(--onda-rust);
+      width: 0%;
+      transition: width 200ms linear;
+    }
+    .onda-popup__tip-fill.complete { background: var(--onda-rust); }
+    .onda-popup__tip-fill.failed { background: var(--onda-muted); }
+
+    /* Live bars */
+    .onda-popup__bars {
+      display: flex; gap: 2px; align-items: flex-end;
+      height: 16px; margin-top: 10px;
+    }
+    .onda-popup__bar {
+      flex: 1; background: var(--onda-rust);
+      transition: height 100ms;
+      min-height: 3px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .onda-popup__bar { height: 50% !important; transition: none; }
+    }
+
+    /* Connect (artist links) */
+    .onda-popup__connect-toggle {
+      margin-top: 10px;
+      background: none; border: 0; cursor: pointer;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px; letter-spacing: 1.2px;
+      color: var(--onda-muted-2);
+      text-transform: lowercase;
+      padding: 0;
+    }
+    .onda-popup__connect-toggle:hover { color: var(--onda-rust); }
+    .onda-popup__connect-panel {
+      margin-top: 10px; padding: 10px 12px;
+      background: var(--onda-paper-2);
+      border: 1px solid var(--onda-line);
+      display: flex; flex-wrap: wrap; gap: 6px;
       align-items: center;
-      padding: 3px 0;
-      font-size: 12px;
     }
-    .wallet-label { color: #8a847d; }
-    .wallet-addr {
-      color: #5c5650;
-      cursor: pointer;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-    }
-    .wallet-addr:hover { color: #c4813a; }
-    .wallet-val {
-      color: #151311;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-    }
-    .wallet-val.funded { color: #c4813a; }
-    .wallet-val.empty { color: #8a847d; }
-    .wallet-btn {
-      width: 100%;
-      background: #151311;
-      color: #f0eae0;
-      border: none;
-      padding: 10px;
-      font-family: inherit;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-    .wallet-btn:hover { background: #c4813a; }
-    .wallet-btn:disabled { opacity: 0.3; cursor: default; }
-    .wallet-btn-sm {
-      width: 100%;
-      background: transparent;
-      color: #5c5650;
-      border: 1px solid #cdc5b8;
-      padding: 6px;
-      font-family: inherit;
-      font-size: 11px;
-      cursor: pointer;
-      margin-top: 6px;
-    }
-    .wallet-btn-sm:hover { border-color: #151311; color: #151311; }
-    .wallet-fund { margin-top: 8px; }
-    .fund-label {
-      font-size: 10px;
-      color: #8a847d;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .fund-addr {
-      font-size: 10px;
-      font-family: 'JetBrains Mono', monospace;
-      color: #5c5650;
-      word-break: break-all;
-      background: #e5ded2;
-      padding: 8px;
-      border: 1px solid #cdc5b8;
-    }
-    .wallet-ready {
+    .onda-popup__connect-pill {
       display: inline-block;
-      background: #c4813a;
-      color: #f0eae0;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 3px 8px;
-      margin-top: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 11px; padding: 4px 10px;
+      border: 1px solid rgba(13, 13, 13, 0.4);
+      text-decoration: none; color: var(--onda-ink);
+      text-transform: lowercase;
+      transition: color 120ms, border-color 120ms;
     }
-    .wallet-error { color: #c4813a; font-size: 12px; }
-
-    /* Onboarding / QR code */
-    .onboard-divider {
-      display: flex;
-      align-items: center;
-      margin: 10px 0;
-      font-size: 10px;
-      color: #8a847d;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .onda-popup__connect-pill:hover {
+      color: var(--onda-rust); border-color: var(--onda-rust);
     }
-    .onboard-divider::before,
-    .onboard-divider::after {
-      content: "";
-      flex: 1;
-      border-top: 1px solid #cdc5b8;
+    .onda-popup__connect-status {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px; color: var(--onda-muted-2);
     }
-    .onboard-divider span {
-      padding: 0 8px;
-    }
-    .onboard-text {
-      font-size: 10px;
-      color: #78716c;
-      margin-bottom: 8px;
-    }
-    .qr-container {
-      display: flex;
-      justify-content: center;
-      margin: 8px 0;
-      background: #f5f0e8;
-      border: 1px solid #c4bcb0;
-      padding: 8px;
-    }
-    .qr-container canvas { display: block; }
-    .qr-link {
-      display: block;
-      text-align: center;
-      font-size: 10px;
-      color: #8a847d;
+    .onda-popup__connect-mbid {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 9px; letter-spacing: 1.2px;
+      color: var(--onda-muted-2);
       text-decoration: none;
-      margin-top: 6px;
+      text-transform: uppercase;
     }
-    .qr-link:hover { color: #c4813a; text-decoration: underline; }
-    .onboard-hint {
-      font-size: 9px;
-      color: #a8a29e;
-      text-align: center;
-      margin-top: 6px;
-      letter-spacing: 0.5px;
+    .onda-popup__connect-mbid:hover { color: var(--onda-rust); }
+
+    /* Gift result pill */
+    .onda-popup__gift-result {
+      display: none;
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--onda-rust);
+    }
+    .onda-popup__gift-result a { color: inherit; text-decoration: none; }
+    .onda-popup__gift-result a:hover { text-decoration: underline; }
+    .onda-popup__gift-result.failed { color: var(--onda-muted-2); }
+
+    /* Recent */
+    .onda-popup__recent { padding: 16px 20px; }
+    .onda-popup__recent-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .onda-popup__link {
+      background: none; border: 0; cursor: pointer;
+      font-size: 10px; color: var(--onda-rust);
+      text-transform: lowercase;
+      text-decoration: none;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    .onda-popup__link:hover { text-decoration: underline; }
+    .onda-popup__recent-row {
+      display: grid; grid-template-columns: 1fr auto auto;
+      gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid rgba(13,13,13,0.06);
+      align-items: center;
+    }
+    .onda-popup__recent-row:last-child { border-bottom: 0; }
+    .onda-popup__recent-meta { min-width: 0; }
+    .onda-popup__recent-track {
+      font-size: 13px; font-weight: 600;
+      text-transform: lowercase;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .onda-popup__recent-artist {
+      font-size: 11px; color: var(--onda-muted-2); margin-top: 2px;
+      text-transform: lowercase;
+    }
+    .onda-popup__recent-time { font-size: 10px; color: var(--onda-muted); text-transform: lowercase; }
+    .onda-popup__recent-amt { font-size: 13px; color: var(--onda-rust); text-decoration: none; }
+    .onda-popup__recent-amt:hover { text-decoration: underline; }
+    .onda-popup__recent-empty {
+      padding: 14px 0; font-size: 12px; color: var(--onda-muted);
     }
 
     /* Footer */
-    .footer {
-      padding: 10px 16px;
-      border-top: 1px solid #cdc5b8;
+    .onda-popup__footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--onda-line);
+      display: flex; gap: 8px;
+      background: var(--onda-paper-2);
     }
-    .footer a {
-      font-size: 11px;
-      color: #8a847d;
-      text-decoration: none;
+    .onda-popup__btn {
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      cursor: pointer; text-transform: lowercase;
+      transition: background 120ms;
     }
-    .footer a:hover { color: #151311; }
+    .onda-popup__btn--primary {
+      flex: 1; padding: 10px 0;
+      background: var(--onda-ink); color: var(--onda-paper); border: 0;
+    }
+    .onda-popup__btn--primary:hover { background: var(--onda-ink-2); }
+    .onda-popup__btn--primary.paused { background: var(--onda-muted-2); }
+    .onda-popup__btn--outline {
+      padding: 10px 14px; background: transparent;
+      border: 1.5px solid var(--onda-ink); color: var(--onda-ink);
+    }
+    .onda-popup__btn--outline:hover { background: rgba(13,13,13,0.05); }
+    .onda-popup__btn--outline.active {
+      background: var(--onda-ink); color: var(--onda-paper);
+    }
+
+    /* Onboarding (wallet not linked) */
+    .onda-popup__onboard {
+      padding: 20px;
+      border-bottom: 1px solid var(--onda-line);
+    }
+    .onda-popup__onboard-title {
+      font-size: 15px; font-weight: 800; letter-spacing: -0.3px;
+      margin-bottom: 4px; text-transform: lowercase;
+    }
+    .onda-popup__onboard-sub {
+      font-size: 12px; color: var(--onda-muted-2); margin-bottom: 14px;
+    }
+    .onda-popup__wallet-btn {
+      width: 100%; padding: 10px 0;
+      background: var(--onda-ink); color: var(--onda-paper);
+      border: 0; cursor: pointer; font-family: inherit;
+      font-size: 12px; font-weight: 600; text-transform: lowercase;
+      margin-bottom: 10px;
+    }
+    .onda-popup__wallet-btn:hover { background: var(--onda-ink-2); }
+    .onda-popup__onboard-divider {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 9px; color: var(--onda-muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+      margin: 14px 0 12px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    .onda-popup__onboard-divider::before,
+    .onda-popup__onboard-divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--onda-line);
+    }
+    .onda-popup__qr {
+      display: flex; justify-content: center;
+      padding: 8px 0;
+    }
+    .onda-popup__qr canvas { display: block; }
+    .onda-popup__onboard-hint {
+      font-size: 10px; color: var(--onda-muted-2);
+      text-align: center; margin-top: 10px;
+      text-transform: lowercase;
+    }
+    .onda-popup__onboard-session {
+      display: flex; justify-content: space-between;
+      font-size: 10px; color: var(--onda-muted); margin-top: 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">onda</div>
-    <div class="header-totals">
-      <div class="header-balance" id="header-balance">—</div>
-      <div class="header-given" id="total-given">$0.00 given</div>
+  <!-- Header -->
+  <header class="onda-popup__header">
+    <div class="onda-popup__wordmark">
+      <svg width="22" height="14" viewBox="0 0 28 16" aria-hidden="true">
+        <path d="M2 8 C 5 2, 9 2, 12 8 S 19 14, 22 8 L 26 8"
+              fill="none" stroke="#ECE6DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>onda</span>
     </div>
-  </div>
+    <div class="onda-popup__balance">
+      <div class="mono onda-popup__balance-val" id="header-balance">—</div>
+      <div class="mono onda-popup__balance-sub" id="header-given">$0.00 sent this week</div>
+    </div>
+  </header>
 
-  <div class="body-content">
-    <div id="wallet-section" class="wallet-section">
-      <!-- Filled by JS -->
+  <!-- Wallet onboarding (shown when unlinked) -->
+  <section id="wallet-section" class="onda-popup__onboard" style="display:none;"></section>
+
+  <!-- Now playing -->
+  <section id="np-section" class="onda-popup__np">
+    <div class="onda-popup__eyebrow">
+      <span class="onda-live-dot" id="live-dot"></span>
+      <span id="np-eyebrow">idle</span>
     </div>
 
-    <hr class="divider">
-
-    <div id="app">
-      <div class="label">now listening</div>
-      <div class="now-playing">
-        <div class="artist-name" id="artist-name">--</div>
-        <div class="track-name" id="track-name">play something to get started</div>
-        <div id="platform-badge" style="display: none;"></div>
-        <div class="progress-container" id="progress-container" style="display: none;">
-          <div class="progress-bar">
-            <div class="progress-fill listening" id="progress-fill"></div>
-          </div>
-          <div class="progress-text">
-            <span id="progress-time">0s</span>
-            <span id="progress-target">10s</span>
-          </div>
-        </div>
-        <div class="gift-result" id="gift-result" style="display: none;"></div>
-        <div class="gift-detail" id="gift-detail" style="display: none;"></div>
+    <div class="onda-popup__np-row" id="np-row" style="display:none;">
+      <div class="onda-popup__art" id="np-art"></div>
+      <div class="onda-popup__np-meta">
+        <div class="onda-popup__np-title" id="track-name">--</div>
+        <div class="onda-popup__np-artist" id="artist-name"></div>
+        <div class="onda-popup__bars" id="live-bars"></div>
+        <button type="button" id="np-connect-btn" class="onda-popup__connect-toggle">connect →</button>
+        <div id="np-connect-panel" class="onda-popup__connect-panel" style="display:none;"></div>
       </div>
-
-      <div id="history-section" style="display: none;">
-        <hr class="divider">
-        <div class="label">recent</div>
-        <div id="history-list"></div>
-      </div>
-
-      <div class="empty-state" id="empty-state"></div>
     </div>
-  </div>
 
-  <div class="footer">
-    <a id="dashboard-link" target="_blank">open dashboard</a>
-  </div>
+    <div class="onda-popup__np-empty" id="np-empty">
+      play something on spotify, soundcloud, bandcamp, or yt music.
+    </div>
 
-  <script src="popup.js" type="text/javascript"></script>
+    <div class="onda-popup__tip-progress" id="tip-progress" style="display:none;">
+      <div class="onda-popup__tip-row">
+        <span class="mono" id="tip-label">wave sends in</span>
+        <span class="mono" id="tip-countdown" style="color: var(--onda-rust);">—</span>
+      </div>
+      <div class="onda-popup__tip-bar">
+        <div class="onda-popup__tip-fill" id="tip-fill"></div>
+      </div>
+      <div class="onda-popup__gift-result" id="gift-result"></div>
+    </div>
+  </section>
+
+  <!-- Recent waves -->
+  <section class="onda-popup__recent">
+    <div class="onda-popup__recent-head">
+      <div class="onda-popup__eyebrow">recent waves</div>
+      <a class="onda-popup__link" id="dashboard-link" href="#" target="_blank">open dashboard →</a>
+    </div>
+    <div id="recent-list"></div>
+    <div class="onda-popup__recent-empty" id="recent-empty">no waves yet.</div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="onda-popup__footer">
+    <button class="onda-popup__btn onda-popup__btn--primary" id="btn-tip-extra">tip extra →</button>
+    <button class="onda-popup__btn onda-popup__btn--outline" id="btn-pause" title="pause auto-tips">pause</button>
+    <button class="onda-popup__btn onda-popup__btn--outline" id="btn-settings" title="settings" aria-label="settings">⚙</button>
+  </footer>
+
+  <script src="popup.js"></script>
 </body>
 </html>

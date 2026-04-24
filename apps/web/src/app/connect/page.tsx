@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -99,6 +99,24 @@ function ConnectInner() {
   });
 
   const sessionValid = sessionKey && isAddress(sessionKey);
+
+  // Push link details to the onda extension so the popup updates immediately,
+  // without relying on Hypersync backfill or the extension's own event watcher
+  // (which gets torn down when Chrome closes the popup during this flow).
+  useEffect(() => {
+    if (!isSuccess) return;
+    if (!address || !sessionKey) return;
+    if (!smartAccount || smartAccount === "0x0000000000000000000000000000000000000000") return;
+    window.postMessage(
+      {
+        type: "ONDA_LINK_DETECTED",
+        ownerAddress: address,
+        smartAccountAddress: smartAccount,
+        sessionAddress: sessionKey,
+      },
+      "*"
+    );
+  }, [isSuccess, address, smartAccount, sessionKey]);
 
   function handleJoin() {
     if (!sessionValid) return;
